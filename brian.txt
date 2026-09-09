@@ -1,1 +1,3 @@
 a simple file
+
+my footer
