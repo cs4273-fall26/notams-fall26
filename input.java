@@ -12,7 +12,7 @@ public class input {
         String departureDate = inputScanner.nextLine(); 
         System.out.println("Please enter your departure time: ");
         String departureTime = inputScanner.nextLine();
-        System.out.println("Is your fight direct or a waypoint: ");
+        System.out.println("Is your flight direct or a waypoint: ");
         String flightType = inputScanner.nextLine();
         System.out.println(startAirport + " " + endAirport + " " +  departureDate + " " + departureTime + " " + flightType);  
         inputScanner.close();
