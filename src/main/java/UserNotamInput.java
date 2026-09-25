@@ -9,9 +9,9 @@ public class UserNotamInput {
         String startAirport = inputScanner.nextLine();
         System.out.println("Please enter your destination airport: ");
         String endAirport = inputScanner.nextLine();
-        System.out.println("Please enter your departure date: ");
+        System.out.println("Please enter your departure date(EX: YYYY-MM-DD): ");
         String departureDate = inputScanner.nextLine();
-        System.out.println("Please enter your departure time: ");
+        System.out.println("Please enter your departure time(EX: HH:MM): ");
         String departureTime = inputScanner.nextLine();
         System.out.println("Is your flight direct or a waypoint: ");
         String flightType = inputScanner.nextLine();
