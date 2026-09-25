@@ -3,6 +3,12 @@ import java.util.List;
 public class NotamOutput {
 
     public void render(List<Notam> notams) {
+        // Checks if the NOTAMs are empty
+        if (notams == null || notams.isEmpty()) {
+            System.out.println("There are no NOTAMs available.");
+            return;
+        }
+
         System.out.println("Prioritized NOTAMs:\n");
 
         int index = 1;
