@@ -1,4 +1,6 @@
-/** An unsuccessful HTTP response received from FAA NMS. */
+/**
+ * An unsuccessful HTTP response received from FAA NMS.
+ */
 public final class NmsHttpException extends NmsApiException
 {
 	private final int statusCode;

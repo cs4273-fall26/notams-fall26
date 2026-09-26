@@ -19,8 +19,10 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,8 +36,10 @@ class NmsApiClientTest
 	private NmsApiClient client;
 	private final AtomicInteger tokenRequests = new AtomicInteger();
 	private final AtomicInteger notamRequests = new AtomicInteger();
-	private final List<String> queries = Collections.synchronizedList( new ArrayList<>() );
-	private final List<String> authorizations = Collections.synchronizedList( new ArrayList<>() );
+	private final List<String> queries = Collections.synchronizedList(
+			new ArrayList<>() );
+	private final List<String> authorizations = Collections.synchronizedList(
+			new ArrayList<>() );
 	private final MutableClock clock = new MutableClock();
 	private volatile String tokenBody = "{\"access_token\":\"test-token\",\"expires_in\":3600}";
 	private volatile String tokenAuthorization;
@@ -51,11 +55,15 @@ class NmsApiClientTest
 	@BeforeEach
 	void setUp() throws IOException
 	{
-		server = HttpServer.create( new InetSocketAddress( "127.0.0.1", 0 ), 0 );
+		server = HttpServer.create( new InetSocketAddress( "127.0.0.1", 0 ),
+				0 );
 		server.createContext( "/token", exchange -> {
 			tokenRequests.incrementAndGet();
-			tokenAuthorization = exchange.getRequestHeaders().getFirst( "Authorization" );
-			tokenRequestBody = new String( exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8 );
+			tokenAuthorization = exchange.getRequestHeaders()
+					.getFirst( "Authorization" );
+			tokenRequestBody = new String(
+					exchange.getRequestBody().readAllBytes(),
+					StandardCharsets.UTF_8 );
 			tokenMethod = exchange.getRequestMethod();
 			if( delayInMilliseconds > 0 ) {
 				try {
@@ -70,14 +78,19 @@ class NmsApiClientTest
 		server.createContext( "/notams", exchange -> {
 			final int count = notamRequests.incrementAndGet();
 			queries.add( exchange.getRequestURI().getRawQuery() );
-			authorizations.add( exchange.getRequestHeaders().getFirst( "Authorization" ) );
-			responseFormat = exchange.getRequestHeaders().getFirst( "nmsResponseFormat" );
+			authorizations.add(
+					exchange.getRequestHeaders().getFirst( "Authorization" ) );
+			responseFormat = exchange.getRequestHeaders()
+					.getFirst( "nmsResponseFormat" );
 			accept = exchange.getRequestHeaders().getFirst( "Accept" );
-			respond( exchange, rejectFirstNotam && count == 1 ? 401 : notamStatus,
-					" { \"location\": \"" + exchange.getRequestURI().getRawQuery() + "\" }\n" );
+			respond( exchange,
+					rejectFirstNotam && count == 1 ? 401 : notamStatus,
+					" { \"location\": \"" + exchange.getRequestURI()
+							.getRawQuery() + "\" }\n" );
 		} );
 		server.start();
-		base = URI.create( "http://127.0.0.1:" + server.getAddress().getPort() );
+		base = URI.create(
+				"http://127.0.0.1:" + server.getAddress().getPort() );
 		client = newClient( Duration.ofSeconds( 3 ) );
 	}
 
@@ -90,15 +103,18 @@ class NmsApiClientTest
 	private NmsApiClient newClient( final Duration timeout )
 	{
 		return new NmsApiClient( " id ", " secret ", base.resolve( "/token" ),
-				base.resolve( "/notams" ), HttpClient.newHttpClient(), clock, timeout );
+				base.resolve( "/notams" ), HttpClient.newHttpClient(), clock,
+				timeout );
 	}
 
-	private static void respond( final HttpExchange exchange, final int status, final String body )
-			throws IOException
+	private static void respond( final HttpExchange exchange,
+								 final int status,
+								 final String body ) throws IOException
 	{
-		try( exchange ) {
+		try (exchange) {
 			final byte[] bytes = body.getBytes( StandardCharsets.UTF_8 );
-			exchange.getResponseHeaders().set( "Content-Type", "application/json" );
+			exchange.getResponseHeaders()
+					.set( "Content-Type", "application/json" );
 			exchange.sendResponseHeaders( status, bytes.length );
 			exchange.getResponseBody().write( bytes );
 		}
@@ -110,28 +126,34 @@ class NmsApiClientTest
 	}
 
 	@Test
-	void preservesRawJsonAndUsesCorrectAuthenticationAndHeaders() throws Exception
+	void preservesRawJsonAndUsesCorrectAuthenticationAndHeaders()
+			throws Exception
 	{
 		final List<RawNotamResponse> responses = fetch();
-		assertEquals( " { \"location\": \"location=KOKC\" }\n", responses.get( 0 ).rawJson() );
-		assertEquals( new LocationIdentifier( "KOKC" ), responses.get( 0 ).location() );
+		assertEquals( " { \"location\": \"location=KOKC\" }\n",
+				responses.get( 0 ).rawJson() );
+		assertEquals( new LocationIdentifier( "KOKC" ),
+				responses.get( 0 ).location() );
 		assertEquals( "Basic " + Base64.getEncoder().encodeToString(
-				"id:secret".getBytes( StandardCharsets.UTF_8 ) ), tokenAuthorization );
+						"id:secret".getBytes( StandardCharsets.UTF_8 ) ),
+				tokenAuthorization );
 		assertEquals( "POST", tokenMethod );
 		assertEquals( "grant_type=client_credentials", tokenRequestBody );
 		assertEquals( "Bearer test-token", authorizations.get( 0 ) );
 		assertEquals( "GEOJSON", responseFormat );
 		assertEquals( "application/json", accept );
-		assertThrows( UnsupportedOperationException.class, () -> responses.clear() );
+		assertThrows( UnsupportedOperationException.class,
+				() -> responses.clear() );
 	}
 
 	@Test
 	void routeAndSingleLocationUseSameCollectionAndReuseToken() throws Exception
 	{
 		final List<RawNotamResponse> responses = client.fetchNotamsForRoute(
-				new LocationIdentifier( "KOKC" ), new LocationIdentifier( "KDFW" ) );
-		assertEquals( List.of( "KOKC", "KDFW" ),
-				responses.stream().map( response -> response.location().value() ).toList() );
+				new LocationIdentifier( "KOKC" ),
+				new LocationIdentifier( "KDFW" ) );
+		assertEquals( List.of( "KOKC", "KDFW" ), responses.stream()
+				.map( response -> response.location().value() ).toList() );
 		assertEquals( List.of( "location=KOKC", "location=KDFW" ), queries );
 		assertEquals( 1, tokenRequests.get() );
 		assertEquals( 2, notamRequests.get() );
@@ -143,7 +165,8 @@ class NmsApiClientTest
 	void equalNormalizedLocationsReturnJsonOnlyOnce() throws Exception
 	{
 		final List<RawNotamResponse> responses = client.fetchNotamsForRoute(
-				new LocationIdentifier( " kokc " ), new LocationIdentifier( "KOKC" ) );
+				new LocationIdentifier( " kokc " ),
+				new LocationIdentifier( "KOKC" ) );
 		assertEquals( 1, responses.size() );
 		assertEquals( 1, notamRequests.get() );
 	}
@@ -151,10 +174,13 @@ class NmsApiClientTest
 	@Test
 	void rejectsInvalidEndBeforeAnyRequest()
 	{
-		assertThrows( IllegalArgumentException.class, () -> client.fetchNotamsForRoute(
-				new LocationIdentifier( "KOKC" ), new LocationIdentifier( "bad!" ) ) );
-		assertThrows( NullPointerException.class, () -> client.fetchNotamsForRoute(
-				new LocationIdentifier( "KOKC" ), null ) );
+		assertThrows( IllegalArgumentException.class,
+				() -> client.fetchNotamsForRoute(
+						new LocationIdentifier( "KOKC" ),
+						new LocationIdentifier( "bad!" ) ) );
+		assertThrows( NullPointerException.class,
+				() -> client.fetchNotamsForRoute(
+						new LocationIdentifier( "KOKC" ), null ) );
 		assertEquals( 0, tokenRequests.get() );
 		assertEquals( 0, notamRequests.get() );
 	}
@@ -170,8 +196,8 @@ class NmsApiClientTest
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {
-			"not json", "[]", "null", "{}", "{\"access_token\":4}", "{\"access_token\":\" \"}",
+	@ValueSource(strings = { "not json", "[]", "null", "{}",
+			"{\"access_token\":4}", "{\"access_token\":\" \"}",
 			"{\"access_token\":\"x\",\"expires_in\":-1}",
 			"{\"access_token\":\"x\",\"expires_in\":0}",
 			"{\"access_token\":\"x\",\"expires_in\":1.5}",
@@ -179,12 +205,12 @@ class NmsApiClientTest
 			"{\"access_token\":\"x\",\"expires_in\":\"later\"}",
 			"{\"access_token\":\"x\",\"expires_in\":9223372036854775808}",
 			"{\"access_token\":\"x\",\"expires_in\":9223372036854775807}",
-			"{\"access_token\":\"x\"} {}"
-	})
+			"{\"access_token\":\"x\"} {}" })
 	void rejectsMalformedAuthenticationWithoutSendingNotamRequest( final String body )
 	{
 		tokenBody = body;
-		final NmsApiException exception = assertThrows( NmsApiException.class, this::fetch );
+		final NmsApiException exception = assertThrows( NmsApiException.class,
+				this::fetch );
 		assertFalse( exception instanceof NmsHttpException );
 		assertEquals( 0, notamRequests.get() );
 	}
@@ -237,7 +263,8 @@ class NmsApiClientTest
 	void repeatedUnauthorizedDoesNotRetryForever()
 	{
 		notamStatus = 401;
-		final NmsHttpException exception = assertThrows( NmsHttpException.class, this::fetch );
+		final NmsHttpException exception = assertThrows( NmsHttpException.class,
+				this::fetch );
 		assertEquals( 401, exception.getStatusCode() );
 		assertEquals( 2, tokenRequests.get() );
 		assertEquals( 2, notamRequests.get() );
@@ -248,7 +275,8 @@ class NmsApiClientTest
 	void preservesNotamHttpStatusWithoutRetry( final int status )
 	{
 		notamStatus = status;
-		final NmsHttpException exception = assertThrows( NmsHttpException.class, this::fetch );
+		final NmsHttpException exception = assertThrows( NmsHttpException.class,
+				this::fetch );
 		assertEquals( status, exception.getStatusCode() );
 		assertEquals( 1, notamRequests.get() );
 	}
@@ -257,7 +285,8 @@ class NmsApiClientTest
 	void authenticationHttpFailureHasStatusAndStopsBeforeNotams()
 	{
 		tokenStatus = 403;
-		assertEquals( 403, assertThrows( NmsHttpException.class, this::fetch ).getStatusCode() );
+		assertEquals( 403, assertThrows( NmsHttpException.class,
+				this::fetch ).getStatusCode() );
 		assertEquals( 0, notamRequests.get() );
 	}
 
@@ -266,7 +295,8 @@ class NmsApiClientTest
 	{
 		delayInMilliseconds = 500;
 		client = newClient( Duration.ofMillis( 100 ) );
-		final NmsApiException exception = assertThrows( NmsApiException.class, this::fetch );
+		final NmsApiException exception = assertThrows( NmsApiException.class,
+				this::fetch );
 		assertFalse( exception instanceof NmsHttpException );
 		assertInstanceOf( HttpTimeoutException.class, exception.getCause() );
 	}
@@ -275,12 +305,14 @@ class NmsApiClientTest
 	void connectionFailurePreservesCause() throws Exception
 	{
 		final int unusedPort;
-		try( final ServerSocket socket = new ServerSocket( 0 ) ) {
+		try (final ServerSocket socket = new ServerSocket( 0 )) {
 			unusedPort = socket.getLocalPort();
 		}
 		client = new NmsApiClient( "id", "secret",
-				URI.create( "http://127.0.0.1:" + unusedPort + "/token" ), base.resolve( "/notams" ) );
-		final NmsApiException exception = assertThrows( NmsApiException.class, this::fetch );
+				URI.create( "http://127.0.0.1:" + unusedPort + "/token" ),
+				base.resolve( "/notams" ) );
+		final NmsApiException exception = assertThrows( NmsApiException.class,
+				this::fetch );
 		assertFalse( exception instanceof NmsHttpException );
 		assertInstanceOf( IOException.class, exception.getCause() );
 	}
@@ -290,8 +322,10 @@ class NmsApiClientTest
 	{
 		try {
 			Thread.currentThread().interrupt();
-			final NmsApiException exception = assertThrows( NmsApiException.class, this::fetch );
-			assertInstanceOf( InterruptedException.class, exception.getCause() );
+			final NmsApiException exception = assertThrows(
+					NmsApiException.class, this::fetch );
+			assertInstanceOf( InterruptedException.class,
+					exception.getCause() );
 			assertTrue( Thread.currentThread().isInterrupted() );
 		}
 		finally {
@@ -323,9 +357,27 @@ class NmsApiClientTest
 	{
 		private Instant now = Instant.parse( "2026-01-01T00:00:00Z" );
 
-		void advance( final long seconds ) { now = now.plusSeconds( seconds ); }
-		@Override public ZoneId getZone() { return ZoneOffset.UTC; }
-		@Override public Clock withZone( final ZoneId zone ) { return Clock.fixed( now, zone ); }
-		@Override public Instant instant() { return now; }
+		void advance( final long seconds )
+		{
+			now = now.plusSeconds( seconds );
+		}
+
+		@Override
+		public ZoneId getZone()
+		{
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone( final ZoneId zone )
+		{
+			return Clock.fixed( now, zone );
+		}
+
+		@Override
+		public Instant instant()
+		{
+			return now;
+		}
 	}
 }

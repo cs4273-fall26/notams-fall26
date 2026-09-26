@@ -3,12 +3,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 
-/** Loads credentials and environment settings before constructing an API client. */
+/**
+ * Loads credentials and environment settings before constructing an API
+ * client.
+ */
 public final class NmsConfiguration
 {
-	private NmsConfiguration() {}
+	private NmsConfiguration()
+	{
+	}
 
 	public static NmsApiClient fromEnvironment()
 	{
@@ -18,21 +24,27 @@ public final class NmsConfiguration
 	static NmsApiClient fromEnvironment( final Map<String, String> environment )
 	{
 		final String mode = StringUtils.defaultIfBlank(
-				environment.get( "FAA_ENVIRONMENT" ), "staging" ).trim().toLowerCase( Locale.ROOT );
+						environment.get( "FAA_ENVIRONMENT" ), "staging" ).trim()
+				.toLowerCase( Locale.ROOT );
 		if( !mode.equals( "staging" ) && !mode.equals( "production" ) ) {
-			throw new IllegalArgumentException( "FAA_ENVIRONMENT must be staging or production." );
+			throw new IllegalArgumentException(
+					"FAA_ENVIRONMENT must be staging or production." );
 		}
 
 		final String prefix = "FAA_" + mode.toUpperCase( Locale.ROOT ) + "_";
-		final List<String> required = new ArrayList<>( List.of( "FAA_CLIENT_ID", "FAA_CLIENT_SECRET" ) );
+		final List<String> required = new ArrayList<>(
+				List.of( "FAA_CLIENT_ID", "FAA_CLIENT_SECRET" ) );
 		if( mode.equals( "production" ) ) {
 			required.add( prefix + "TOKEN_URL" );
 			required.add( prefix + "NOTAM_URL" );
 		}
-		final List<String> missing = required.stream()
-				.filter( name -> StringUtils.isBlank( environment.get( name ) ) ).toList();
+		final List<String> missing = required.stream().filter(
+						name -> StringUtils.isBlank( environment.get( name ) ) )
+				.toList();
 		if( !missing.isEmpty() ) {
-			throw new IllegalArgumentException( "Missing environment variables: " + String.join( ", ", missing ) );
+			throw new IllegalArgumentException(
+					"Missing environment variables: " + String.join( ", ",
+							missing ) );
 		}
 
 		final URI tokenUri = endpoint( environment, prefix + "TOKEN_URL",
@@ -44,18 +56,23 @@ public final class NmsConfiguration
 	}
 
 	private static URI endpoint( final Map<String, String> environment,
-			final String name, final String defaultUrl )
+								 final String name,
+								 final String defaultUrl )
 	{
 		try {
-			final URI uri = URI.create( StringUtils.defaultIfBlank( environment.get( name ), defaultUrl ).trim() );
-			if( !"https".equalsIgnoreCase( uri.getScheme() ) || uri.getHost() == null
-					|| uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null ) {
+			final URI uri = URI.create(
+					StringUtils.defaultIfBlank( environment.get( name ),
+							defaultUrl ).trim() );
+			if( !"https".equalsIgnoreCase( uri.getScheme() )
+					|| uri.getHost() == null || uri.getUserInfo() != null
+					|| uri.getQuery() != null || uri.getFragment() != null ) {
 				throw new IllegalArgumentException();
 			}
 			return uri;
 		}
 		catch( final IllegalArgumentException exception ) {
-			throw new IllegalArgumentException( name + " must be an absolute HTTPS URL without user info, query, or fragment." );
+			throw new IllegalArgumentException( name
+					+ " must be an absolute HTTPS URL without user info, query, or fragment." );
 		}
 	}
 }

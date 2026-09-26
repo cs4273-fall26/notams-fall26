@@ -14,20 +14,25 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.StringUtils;
 
-/** Connects to FAA's NOTAM Management Service (NMS) and preserves raw NOTAM JSON. */
+/**
+ * Connects to FAA's NOTAM Management Service (NMS) and preserves raw NOTAM
+ * JSON.
+ */
 public class NmsApiClient
 {
 	private static final int CONNECTION_TIMEOUT_IN_SECONDS = 10;
 	private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
 	private static final int TOKEN_EXPIRATION_MARGIN_IN_SECONDS = 60;
-	private static final ObjectMapper JSON = new ObjectMapper()
-			.enable( DeserializationFeature.FAIL_ON_TRAILING_TOKENS );
+	private static final ObjectMapper JSON = new ObjectMapper().enable(
+			DeserializationFeature.FAIL_ON_TRAILING_TOKENS );
 
 	private final String clientId;
 	private final String clientSecret;
@@ -41,18 +46,25 @@ public class NmsApiClient
 	private String cachedAccessToken;
 	private Instant tokenExpirationTime = Instant.EPOCH;
 
-	public NmsApiClient( final String clientId, final String clientSecret,
-			final URI tokenUri, final URI notamUri )
+	public NmsApiClient( final String clientId,
+						 final String clientSecret,
+						 final URI tokenUri,
+						 final URI notamUri )
 	{
 		this( clientId, clientSecret, tokenUri, notamUri,
 				HttpClient.newBuilder().connectTimeout(
-						Duration.ofSeconds( CONNECTION_TIMEOUT_IN_SECONDS ) ).build(),
-				Clock.systemUTC(), Duration.ofSeconds( REQUEST_TIMEOUT_IN_SECONDS ) );
+								Duration.ofSeconds( CONNECTION_TIMEOUT_IN_SECONDS ) )
+						.build(), Clock.systemUTC(),
+				Duration.ofSeconds( REQUEST_TIMEOUT_IN_SECONDS ) );
 	}
 
-	NmsApiClient( final String clientId, final String clientSecret,
-			final URI tokenUri, final URI notamUri, final HttpClient httpClient,
-			final Clock clock, final Duration requestTimeout )
+	NmsApiClient( final String clientId,
+				  final String clientSecret,
+				  final URI tokenUri,
+				  final URI notamUri,
+				  final HttpClient httpClient,
+				  final Clock clock,
+				  final Duration requestTimeout )
 	{
 		final List<String> missing = new ArrayList<>();
 		if( StringUtils.isBlank( clientId ) ) {
@@ -62,7 +74,8 @@ public class NmsApiClient
 			missing.add( "clientSecret" );
 		}
 		if( !missing.isEmpty() ) {
-			throw new IllegalArgumentException( "Missing credentials: " + String.join( ", ", missing ) );
+			throw new IllegalArgumentException(
+					"Missing credentials: " + String.join( ", ", missing ) );
 		}
 		this.clientId = clientId.trim();
 		this.clientSecret = clientSecret.trim();
@@ -70,12 +83,16 @@ public class NmsApiClient
 		this.notamUri = Objects.requireNonNull( notamUri, "notamUri" );
 		this.httpClient = Objects.requireNonNull( httpClient, "httpClient" );
 		this.clock = Objects.requireNonNull( clock, "clock" );
-		this.requestTimeout = Objects.requireNonNull( requestTimeout, "requestTimeout" );
+		this.requestTimeout = Objects.requireNonNull( requestTimeout,
+				"requestTimeout" );
 	}
 
-	/** Returns one response per distinct validated location, in route order. */
+	/**
+	 * Returns one response per distinct validated location, in route order.
+	 */
 	public List<RawNotamResponse> fetchNotamsForRoute( final LocationIdentifier startLocation,
-			final LocationIdentifier endLocation ) throws NmsApiException
+													   final LocationIdentifier endLocation )
+			throws NmsApiException
 	{
 		Objects.requireNonNull( startLocation, "startLocation" );
 		Objects.requireNonNull( endLocation, "endLocation" );
@@ -87,11 +104,14 @@ public class NmsApiClient
 		return List.of( start, end );
 	}
 
-	/** Uses the same response collection as route requests. */
+	/**
+	 * Uses the same response collection as route requests.
+	 */
 	public List<RawNotamResponse> fetchNotamsByLocation( final LocationIdentifier location )
 			throws NmsApiException
 	{
-		return List.of( fetchResponse( Objects.requireNonNull( location, "location" ) ) );
+		return List.of( fetchResponse(
+				Objects.requireNonNull( location, "location" ) ) );
 	}
 
 	private RawNotamResponse fetchResponse( final LocationIdentifier location )
@@ -104,7 +124,8 @@ public class NmsApiClient
 			response = sendNotamRequest( location );
 		}
 		if( !isSuccessful( response.statusCode() ) ) {
-			throw createHttpException( "NOTAM request for " + location.value(), response );
+			throw createHttpException( "NOTAM request for " + location.value(),
+					response );
 		}
 		return new RawNotamResponse( location, response.body() );
 	}
@@ -112,8 +133,10 @@ public class NmsApiClient
 	private HttpResponse<String> sendNotamRequest( final LocationIdentifier location )
 			throws NmsApiException
 	{
-		final String encodedLocation = URLEncoder.encode( location.value(), StandardCharsets.UTF_8 );
-		final URI requestUri = URI.create( notamUri + "?location=" + encodedLocation );
+		final String encodedLocation = URLEncoder.encode( location.value(),
+				StandardCharsets.UTF_8 );
+		final URI requestUri = URI.create(
+				notamUri + "?location=" + encodedLocation );
 		final HttpRequest request = HttpRequest.newBuilder( requestUri )
 				.timeout( requestTimeout )
 				.header( "Authorization", "Bearer " + getAccessToken() )
@@ -124,19 +147,23 @@ public class NmsApiClient
 
 	private synchronized String getAccessToken() throws NmsApiException
 	{
-		if( cachedAccessToken != null && clock.instant().isBefore( tokenExpirationTime ) ) {
+		if( cachedAccessToken != null && clock.instant()
+				.isBefore( tokenExpirationTime ) ) {
 			return cachedAccessToken;
 		}
 		final String credentials = clientId + ":" + clientSecret;
 		final String basicAuthorization = Base64.getEncoder().encodeToString(
 				credentials.getBytes( StandardCharsets.UTF_8 ) );
-		final HttpRequest request = HttpRequest.newBuilder( tokenUri ).timeout( requestTimeout )
+		final HttpRequest request = HttpRequest.newBuilder( tokenUri )
+				.timeout( requestTimeout )
 				.header( "Authorization", "Basic " + basicAuthorization )
 				.header( "Content-Type", "application/x-www-form-urlencoded" )
 				.header( "Accept", "application/json" )
-				.POST( HttpRequest.BodyPublishers.ofString( "grant_type=client_credentials" ) ).build();
+				.POST( HttpRequest.BodyPublishers.ofString(
+						"grant_type=client_credentials" ) ).build();
 		final Instant requestedAt = clock.instant();
-		final HttpResponse<String> response = sendRequest( request, "FAA authentication request" );
+		final HttpResponse<String> response = sendRequest( request,
+				"FAA authentication request" );
 		if( !isSuccessful( response.statusCode() ) ) {
 			throw createHttpException( "FAA authentication request", response );
 		}
@@ -147,22 +174,28 @@ public class NmsApiClient
 		}
 		catch( final JsonProcessingException exception ) {
 			// Parser messages can contain the authentication response, so do not expose them.
-			throw new NmsApiException( "FAA authentication returned invalid JSON." );
+			throw new NmsApiException(
+					"FAA authentication returned invalid JSON." );
 		}
 		if( tokenResponse == null || !tokenResponse.isObject() ) {
-			throw new NmsApiException( "FAA authentication must return a JSON object." );
+			throw new NmsApiException(
+					"FAA authentication must return a JSON object." );
 		}
 		final JsonNode token = tokenResponse.get( "access_token" );
-		if( token == null || !token.isTextual() || StringUtils.isBlank( token.textValue() ) ) {
-			throw new NmsApiException( "FAA authentication response is missing a nonblank access_token." );
+		if( token == null || !token.isTextual() || StringUtils.isBlank(
+				token.textValue() ) ) {
+			throw new NmsApiException(
+					"FAA authentication response is missing a nonblank access_token." );
 		}
-		final Instant expiration = tokenExpiration( tokenResponse.get( "expires_in" ), requestedAt );
+		final Instant expiration = tokenExpiration(
+				tokenResponse.get( "expires_in" ), requestedAt );
 		cachedAccessToken = token.textValue();
 		tokenExpirationTime = expiration;
 		return cachedAccessToken;
 	}
 
-	private Instant tokenExpiration( final JsonNode expiresIn, final Instant requestedAt )
+	private Instant tokenExpiration( final JsonNode expiresIn,
+									 final Instant requestedAt )
 			throws NmsApiException
 	{
 		// Without a lifetime, use the token once but do not assume it remains valid.
@@ -183,36 +216,44 @@ public class NmsApiClient
 			if( lifetimeInSeconds <= 0 ) {
 				throw new IllegalArgumentException();
 			}
-			final long safeLifetimeInSeconds = Math.max(
-					0, lifetimeInSeconds - TOKEN_EXPIRATION_MARGIN_IN_SECONDS );
+			final long safeLifetimeInSeconds = Math.max( 0,
+					lifetimeInSeconds - TOKEN_EXPIRATION_MARGIN_IN_SECONDS );
 			return requestedAt.plusSeconds( safeLifetimeInSeconds );
 		}
-		catch( final IllegalArgumentException | ArithmeticException | DateTimeException exception ) {
-			throw new NmsApiException( "FAA authentication returned an invalid expires_in value." );
+		catch( final IllegalArgumentException | ArithmeticException |
+					 DateTimeException exception ) {
+			throw new NmsApiException(
+					"FAA authentication returned an invalid expires_in value." );
 		}
 	}
 
-	private HttpResponse<String> sendRequest( final HttpRequest request, final String action )
+	private HttpResponse<String> sendRequest( final HttpRequest request,
+											  final String action )
 			throws NmsApiException
 	{
 		try {
-			return httpClient.send( request, HttpResponse.BodyHandlers.ofString() );
+			return httpClient.send( request,
+					HttpResponse.BodyHandlers.ofString() );
 		}
 		catch( final HttpTimeoutException exception ) {
 			throw new NmsApiException( action + " timed out (request limit "
-					+ requestTimeout.toMillis() + " milliseconds).", exception );
+					+ requestTimeout.toMillis() + " milliseconds).",
+					exception );
 		}
 		catch( final IOException exception ) {
-			throw new NmsApiException( action + " failed because of a connection problem.", exception );
+			throw new NmsApiException(
+					action + " failed because of a connection problem.",
+					exception );
 		}
 		catch( final InterruptedException exception ) {
 			Thread.currentThread().interrupt();
-			throw new NmsApiException( action + " was interrupted.", exception );
+			throw new NmsApiException( action + " was interrupted.",
+					exception );
 		}
 	}
 
 	private NmsHttpException createHttpException( final String action,
-			final HttpResponse<String> response )
+												  final HttpResponse<String> response )
 	{
 		final int statusCode = response.statusCode();
 		final String explanation;
@@ -235,7 +276,8 @@ public class NmsApiClient
 			explanation = "The FAA API returned an unsuccessful response.";
 		}
 		return new NmsHttpException( statusCode,
-				action + " failed with HTTP " + statusCode + ". " + explanation );
+				action + " failed with HTTP " + statusCode + ". "
+						+ explanation );
 	}
 
 	private boolean isSuccessful( final int statusCode )
