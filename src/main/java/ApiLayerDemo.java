@@ -1,78 +1,48 @@
+import java.util.List;
+
 /**
- * Temporary program used to test the API Layer.
- * <p>
- * It sends a start and end location to NmsApiClient and displays a short
- * preview of each raw FAA response.
+ * Temporary API demo using command-line arguments, separate from CAP-19's interactive input.
+ * Requires FAA_CLIENT_ID and FAA_CLIENT_SECRET; see README for environment selection.
  */
 public class ApiLayerDemo
 {
-
-	public static void main( String[] args )
+	public static void main( final String[] args )
 	{
-
-		/*
-		 * Use locations entered in the terminal.
-		 * If none are entered, use KOKC and KDFW as examples.
-		 */
-		String startLocation = args.length >= 1 ? args[0] : "KOKC";
-		String endLocation = args.length >= 2 ? args[1] : "KDFW";
-
 		try {
-			// Create the client using credentials from environment variables.
-			NmsApiClient client = NmsApiClient.fromEnvironment();
-
-			System.out.println(
-					"Requesting NOTAMs for " + startLocation + " to "
-							+ endLocation + "..." );
-
-			// Send both locations to the API Layer.
-			RawRouteResponses responses = client.fetchNotamsForRoute(
-					startLocation, endLocation );
-
-			// Display a short preview to confirm raw JSON was returned.
-			printResponse( responses.getStartLocation(),
-					responses.getStartResponse() );
-
-			printResponse( responses.getEndLocation(),
-					responses.getEndResponse() );
-
-			System.out.println( "API Layer test completed successfully." );
-
-		}
-		catch( NmsApiException exception ) {
-			System.err.println( "API Layer error: " + exception.getMessage() );
-
-			// Display the status code only when the FAA returned one.
-			if( exception.getStatusCode() != -1 ) {
-				System.err.println(
-						"HTTP status: " + exception.getStatusCode() );
+			final LocationIdentifier start = new LocationIdentifier( args.length >= 1 ? args[0] : "KOKC" );
+			final LocationIdentifier end = new LocationIdentifier( args.length >= 2 ? args[1] : "KDFW" );
+			final NmsApiClient client = NmsConfiguration.fromEnvironment();
+			System.out.println( "Requesting NOTAMs for " + start.value() + " to " + end.value() + "..." );
+			final List<RawNotamResponse> responses = client.fetchNotamsForRoute( start, end );
+			for( final RawNotamResponse response : responses ) {
+				final String label = start.equals( end ) ? "Start and End Location Response:"
+						: response.location().equals( start ) ? "Start Location Response:" : "End Location Response:";
+				System.out.println( label );
+				printResponsePreview( response );
 			}
+			System.out.println( "API Layer test completed successfully." );
 		}
-		catch( IllegalArgumentException exception ) {
-			System.err.println(
-					"Configuration error: " + exception.getMessage() );
+		catch( final NmsHttpException exception ) {
+			System.err.println( "API Layer error: " + exception.getMessage() );
+			System.err.println( "HTTP status: " + exception.getStatusCode() );
+		}
+		catch( final NmsApiException exception ) {
+			System.err.println( "API Layer error: " + exception.getMessage() );
+		}
+		catch( final IllegalArgumentException exception ) {
+			System.err.println( "Input or configuration error: " + exception.getMessage() );
 		}
 	}
 
-	/**
-	 * Displays the response size and its first 300 characters.
-	 * <p>
-	 * The full raw response remains available to the future Parsing Layer.
-	 */
-	private static void printResponse( String location, String rawResponse )
+	/** Prints at most 300 characters; the full JSON stays available to the parsing layer. */
+	private static void printResponsePreview( final RawNotamResponse response )
 	{
-
-		System.out.println();
-		System.out.println( "Location: " + location );
-		System.out.println( "Raw response length: " + rawResponse.length()
-				+ " characters" );
-
-		int previewLength = Math.min( 300, rawResponse.length() );
-
+		System.out.println( "Location: " + response.location().value() );
+		System.out.println( "Raw response length: " + response.rawJson().length() + " characters" );
+		final int previewLength = Math.min( 300, response.rawJson().length() );
 		System.out.println( "Response preview:" );
-		System.out.println( rawResponse.substring( 0, previewLength ) );
-
-		if( rawResponse.length() > previewLength ) {
+		System.out.println( response.rawJson().substring( 0, previewLength ) );
+		if( response.rawJson().length() > previewLength ) {
 			System.out.println( "..." );
 		}
 	}

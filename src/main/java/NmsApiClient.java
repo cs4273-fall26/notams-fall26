@@ -6,308 +6,216 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Objects;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 
-/**
- * Connects the application to the FAA NMS API.
- * <p>
- * Responsibilities: 1. Read and use the FAA credentials. 2. Request an access
- * token. 3. Request NOTAM data using airport location codes. 4. Return the
- * original JSON without parsing it. 5. Handle timeouts, connection failures,
- * and HTTP errors.
- */
+/** Connects to FAA's NOTAM Management Service (NMS) and preserves raw NOTAM JSON. */
 public class NmsApiClient
 {
-
-	// FAA pre-production authentication endpoint.
-	private static final String TOKEN_URL = "https://api-staging.cgifederal-aim.com/v1/auth/token";
-
-	// FAA pre-production NOTAM endpoint.
-	private static final String NOTAM_URL = "https://api-staging.cgifederal-aim.com/nmsapi/v1/notams";
-
-	// Maximum time allowed to establish a connection.
-	private static final Duration CONNECTION_TIMEOUT = Duration.ofSeconds( 10 );
-
-	// Maximum time allowed for one complete API request.
-	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds( 30 );
-
-	// Finds the access_token value inside the authentication JSON.
-	private static final Pattern ACCESS_TOKEN_PATTERN = Pattern.compile(
-			"\"access_token\"\\s*:\\s*\"([^\"]+)\"" );
-
-	// Finds the expires_in value inside the authentication JSON.
-	private static final Pattern EXPIRES_IN_PATTERN = Pattern.compile(
-			"\"expires_in\"\\s*:\\s*\"?(\\d+)\"?" );
+	private static final int CONNECTION_TIMEOUT_IN_SECONDS = 10;
+	private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
+	private static final int TOKEN_EXPIRATION_MARGIN_IN_SECONDS = 60;
+	private static final ObjectMapper JSON = new ObjectMapper()
+			.enable( DeserializationFeature.FAIL_ON_TRAILING_TOKENS );
 
 	private final String clientId;
 	private final String clientSecret;
+	private final URI tokenUri;
+	private final URI notamUri;
 	private final HttpClient httpClient;
+	private final Clock clock;
+	private final Duration requestTimeout;
 
-	// The access token is temporarily saved so we do not request a new
-	// token for every airport.
+	// Cache per client to avoid authenticating for every request; guarded by this client.
 	private String cachedAccessToken;
 	private Instant tokenExpirationTime = Instant.EPOCH;
 
-	/**
-	 * Creates the API client using the supplied FAA credentials.
-	 */
-	public NmsApiClient( String clientId, String clientSecret )
+	public NmsApiClient( final String clientId, final String clientSecret,
+			final URI tokenUri, final URI notamUri )
 	{
-		if( clientId == null || clientId.isBlank() ) {
-			throw new IllegalArgumentException( "FAA Client ID is required." );
-		}
+		this( clientId, clientSecret, tokenUri, notamUri,
+				HttpClient.newBuilder().connectTimeout(
+						Duration.ofSeconds( CONNECTION_TIMEOUT_IN_SECONDS ) ).build(),
+				Clock.systemUTC(), Duration.ofSeconds( REQUEST_TIMEOUT_IN_SECONDS ) );
+	}
 
-		if( clientSecret == null || clientSecret.isBlank() ) {
-			throw new IllegalArgumentException(
-					"FAA Client Secret is required." );
+	NmsApiClient( final String clientId, final String clientSecret,
+			final URI tokenUri, final URI notamUri, final HttpClient httpClient,
+			final Clock clock, final Duration requestTimeout )
+	{
+		final List<String> missing = new ArrayList<>();
+		if( StringUtils.isBlank( clientId ) ) {
+			missing.add( "clientId" );
 		}
-
+		if( StringUtils.isBlank( clientSecret ) ) {
+			missing.add( "clientSecret" );
+		}
+		if( !missing.isEmpty() ) {
+			throw new IllegalArgumentException( "Missing credentials: " + String.join( ", ", missing ) );
+		}
 		this.clientId = clientId.trim();
-		this.clientSecret = clientSecret;
-
-		// Java's built-in HTTP client means no external library is required.
-		this.httpClient = HttpClient.newBuilder()
-				.connectTimeout( CONNECTION_TIMEOUT ).build();
+		this.clientSecret = clientSecret.trim();
+		this.tokenUri = Objects.requireNonNull( tokenUri, "tokenUri" );
+		this.notamUri = Objects.requireNonNull( notamUri, "notamUri" );
+		this.httpClient = Objects.requireNonNull( httpClient, "httpClient" );
+		this.clock = Objects.requireNonNull( clock, "clock" );
+		this.requestTimeout = Objects.requireNonNull( requestTimeout, "requestTimeout" );
 	}
 
-	/**
-	 * Creates an API client using credentials stored in environment variables.
-	 * <p>
-	 * Expected variables: FAA_CLIENT_ID FAA_CLIENT_SECRET
-	 */
-	public static NmsApiClient fromEnvironment() throws NmsApiException
+	/** Returns one response per distinct validated location, in route order. */
+	public List<RawNotamResponse> fetchNotamsForRoute( final LocationIdentifier startLocation,
+			final LocationIdentifier endLocation ) throws NmsApiException
 	{
-		String clientId = System.getenv( "FAA_CLIENT_ID" );
-		String clientSecret = System.getenv( "FAA_CLIENT_SECRET" );
-
-		if( clientId == null || clientId.isBlank() ) {
-			throw new NmsApiException(
-					"The FAA_CLIENT_ID environment variable is missing." );
+		Objects.requireNonNull( startLocation, "startLocation" );
+		Objects.requireNonNull( endLocation, "endLocation" );
+		final RawNotamResponse start = fetchResponse( startLocation );
+		if( startLocation.equals( endLocation ) ) {
+			return List.of( start );
 		}
-
-		if( clientSecret == null || clientSecret.isBlank() ) {
-			throw new NmsApiException(
-					"The FAA_CLIENT_SECRET environment variable is missing." );
-		}
-
-		return new NmsApiClient( clientId, clientSecret );
+		final RawNotamResponse end = fetchResponse( endLocation );
+		return List.of( start, end );
 	}
 
-	/**
-	 * Receives the start and end locations from the User Input Layer.
-	 * <p>
-	 * It requests NOTAMs for both locations and returns the two raw JSON
-	 * responses for the Parsing Layer.
-	 */
-	public RawRouteResponses fetchNotamsForRoute( String startLocation,
-												  String endLocation )
+	/** Uses the same response collection as route requests. */
+	public List<RawNotamResponse> fetchNotamsByLocation( final LocationIdentifier location )
 			throws NmsApiException
 	{
-
-		String cleanStart = validateLocation( startLocation, "start" );
-		String cleanEnd = validateLocation( endLocation, "end" );
-
-		String startJson = fetchNotamsByLocation( cleanStart );
-
-		// Avoid sending the same request twice if both locations are equal.
-		String endJson;
-		if( cleanStart.equals( cleanEnd ) ) {
-			endJson = startJson;
-		}
-		else {
-			endJson = fetchNotamsByLocation( cleanEnd );
-		}
-
-		return new RawRouteResponses( cleanStart, startJson, cleanEnd,
-				endJson );
+		return List.of( fetchResponse( Objects.requireNonNull( location, "location" ) ) );
 	}
 
-	/**
-	 * Requests raw NOTAM JSON for one airport or location.
-	 */
-	public String fetchNotamsByLocation( String location )
+	private RawNotamResponse fetchResponse( final LocationIdentifier location )
 			throws NmsApiException
 	{
-
-		String cleanLocation = validateLocation( location, "requested" );
-
-		HttpResponse<String> response = sendNotamRequest( cleanLocation );
-
-		/*
-		 * A 401 response can mean that the cached token expired.
-		 * Clear it, request a new token, and retry one time.
-		 */
+		HttpResponse<String> response = sendNotamRequest( location );
+		// A 401 can indicate that the cached token is no longer valid.
 		if( response.statusCode() == 401 ) {
 			clearCachedToken();
-			response = sendNotamRequest( cleanLocation );
+			response = sendNotamRequest( location );
 		}
-
-		if( isSuccessful( response.statusCode() ) ) {
-			// Return the exact JSON received from the FAA.
-			return response.body();
+		if( !isSuccessful( response.statusCode() ) ) {
+			throw createHttpException( "NOTAM request for " + location.value(), response );
 		}
-
-		throw createHttpException( "NOTAM request for " + cleanLocation,
-				response );
+		return new RawNotamResponse( location, response.body() );
 	}
 
-	/**
-	 * Constructs and sends the FAA request for one location.
-	 */
-	private HttpResponse<String> sendNotamRequest( String location )
+	private HttpResponse<String> sendNotamRequest( final LocationIdentifier location )
 			throws NmsApiException
 	{
-
-		String encodedLocation = URLEncoder.encode( location,
-				StandardCharsets.UTF_8 );
-
-		URI requestUri = URI.create(
-				NOTAM_URL + "?location=" + encodedLocation );
-
-		HttpRequest request = HttpRequest.newBuilder().uri( requestUri )
-				.timeout( REQUEST_TIMEOUT )
+		final String encodedLocation = URLEncoder.encode( location.value(), StandardCharsets.UTF_8 );
+		final URI requestUri = URI.create( notamUri + "?location=" + encodedLocation );
+		final HttpRequest request = HttpRequest.newBuilder( requestUri )
+				.timeout( requestTimeout )
 				.header( "Authorization", "Bearer " + getAccessToken() )
 				.header( "Accept", "application/json" )
 				.header( "nmsResponseFormat", "GEOJSON" ).GET().build();
-
 		return sendRequest( request, "FAA NOTAM request" );
 	}
 
-	/**
-	 * Returns a valid access token.
-	 * <p>
-	 * A cached token is reused until it is close to expiring.
-	 */
 	private synchronized String getAccessToken() throws NmsApiException
 	{
-
-		if( cachedAccessToken != null && Instant.now()
-				.isBefore( tokenExpirationTime ) ) {
+		if( cachedAccessToken != null && clock.instant().isBefore( tokenExpirationTime ) ) {
 			return cachedAccessToken;
 		}
-
-		// The token endpoint uses HTTP Basic authentication.
-		String credentials = clientId + ":" + clientSecret;
-		String basicAuthorization = Base64.getEncoder().encodeToString(
+		final String credentials = clientId + ":" + clientSecret;
+		final String basicAuthorization = Base64.getEncoder().encodeToString(
 				credentials.getBytes( StandardCharsets.UTF_8 ) );
-
-		HttpRequest request = HttpRequest.newBuilder()
-				.uri( URI.create( TOKEN_URL ) ).timeout( REQUEST_TIMEOUT )
+		final HttpRequest request = HttpRequest.newBuilder( tokenUri ).timeout( requestTimeout )
 				.header( "Authorization", "Basic " + basicAuthorization )
 				.header( "Content-Type", "application/x-www-form-urlencoded" )
 				.header( "Accept", "application/json" )
-				.POST( HttpRequest.BodyPublishers.ofString(
-						"grant_type=client_credentials" ) ).build();
-
-		HttpResponse<String> response = sendRequest( request,
-				"FAA authentication request" );
-
+				.POST( HttpRequest.BodyPublishers.ofString( "grant_type=client_credentials" ) ).build();
+		final Instant requestedAt = clock.instant();
+		final HttpResponse<String> response = sendRequest( request, "FAA authentication request" );
 		if( !isSuccessful( response.statusCode() ) ) {
 			throw createHttpException( "FAA authentication request", response );
 		}
 
-		Matcher tokenMatcher = ACCESS_TOKEN_PATTERN.matcher( response.body() );
-
-		if( !tokenMatcher.find() ) {
-			throw new NmsApiException(
-					"FAA authentication succeeded, but no access token "
-							+ "was found in the response." );
+		final JsonNode tokenResponse;
+		try {
+			tokenResponse = JSON.readTree( response.body() );
 		}
-
-		cachedAccessToken = tokenMatcher.group( 1 );
-
-		// FAA tokens normally last about 30 minutes.
-		long expiresInSeconds = 1799;
-		Matcher expirationMatcher = EXPIRES_IN_PATTERN.matcher(
-				response.body() );
-
-		if( expirationMatcher.find() ) {
-			expiresInSeconds = Long.parseLong( expirationMatcher.group( 1 ) );
+		catch( final JsonProcessingException exception ) {
+			// Parser messages can contain the authentication response, so do not expose them.
+			throw new NmsApiException( "FAA authentication returned invalid JSON." );
 		}
-
-		/*
-		 * Treat the token as expired 60 seconds early so it does not expire
-		 * while an API request is being sent.
-		 */
-		long safeLifetime = Math.max( 1, expiresInSeconds - 60 );
-		tokenExpirationTime = Instant.now().plusSeconds( safeLifetime );
-
+		if( tokenResponse == null || !tokenResponse.isObject() ) {
+			throw new NmsApiException( "FAA authentication must return a JSON object." );
+		}
+		final JsonNode token = tokenResponse.get( "access_token" );
+		if( token == null || !token.isTextual() || StringUtils.isBlank( token.textValue() ) ) {
+			throw new NmsApiException( "FAA authentication response is missing a nonblank access_token." );
+		}
+		final Instant expiration = tokenExpiration( tokenResponse.get( "expires_in" ), requestedAt );
+		cachedAccessToken = token.textValue();
+		tokenExpirationTime = expiration;
 		return cachedAccessToken;
 	}
 
-	/**
-	 * Sends an HTTP request and converts network problems into clear,
-	 * API-specific exceptions.
-	 */
-	private HttpResponse<String> sendRequest( HttpRequest request,
-											  String action )
+	private Instant tokenExpiration( final JsonNode expiresIn, final Instant requestedAt )
 			throws NmsApiException
 	{
-
+		// Without a lifetime, use the token once but do not assume it remains valid.
+		if( expiresIn == null ) {
+			return requestedAt;
+		}
 		try {
-			return httpClient.send( request,
-					HttpResponse.BodyHandlers.ofString() );
+			final long lifetimeInSeconds;
+			if( expiresIn.isIntegralNumber() && expiresIn.canConvertToLong() ) {
+				lifetimeInSeconds = expiresIn.longValue();
+			}
+			else if( expiresIn.isTextual() ) {
+				lifetimeInSeconds = Long.parseLong( expiresIn.textValue() );
+			}
+			else {
+				throw new IllegalArgumentException();
+			}
+			if( lifetimeInSeconds <= 0 ) {
+				throw new IllegalArgumentException();
+			}
+			final long safeLifetimeInSeconds = Math.max(
+					0, lifetimeInSeconds - TOKEN_EXPIRATION_MARGIN_IN_SECONDS );
+			return requestedAt.plusSeconds( safeLifetimeInSeconds );
 		}
-		catch( HttpTimeoutException exception ) {
-			throw new NmsApiException(
-					action + " timed out after " + REQUEST_TIMEOUT.toSeconds()
-							+ " seconds.", exception );
-		}
-		catch( IOException exception ) {
-			throw new NmsApiException(
-					action + " failed because of a connection problem.",
-					exception );
-		}
-		catch( InterruptedException exception ) {
-			// Restore Java's interrupted status before reporting the error.
-			Thread.currentThread().interrupt();
-
-			throw new NmsApiException( action + " was interrupted.",
-					exception );
+		catch( final IllegalArgumentException | ArithmeticException | DateTimeException exception ) {
+			throw new NmsApiException( "FAA authentication returned an invalid expires_in value." );
 		}
 	}
 
-	/**
-	 * Validates and standardizes a location entered by the user.
-	 * <p>
-	 * Example: " kokc " becomes "KOKC".
-	 */
-	private String validateLocation( String location, String label )
+	private HttpResponse<String> sendRequest( final HttpRequest request, final String action )
 			throws NmsApiException
 	{
-
-		if( location == null || location.isBlank() ) {
-			throw new NmsApiException(
-					"The " + label + " location cannot be empty." );
+		try {
+			return httpClient.send( request, HttpResponse.BodyHandlers.ofString() );
 		}
-
-		String cleanLocation = location.trim().toUpperCase( Locale.US );
-
-		// Accept common FAA and ICAO location identifiers.
-		if( !cleanLocation.matches( "[A-Z0-9]{3,5}" ) ) {
-			throw new NmsApiException(
-					"Invalid " + label + " location: " + cleanLocation
-							+ ". Enter a code such as KOKC or KDFW." );
+		catch( final HttpTimeoutException exception ) {
+			throw new NmsApiException( action + " timed out (request limit "
+					+ requestTimeout.toMillis() + " milliseconds).", exception );
 		}
-
-		return cleanLocation;
+		catch( final IOException exception ) {
+			throw new NmsApiException( action + " failed because of a connection problem.", exception );
+		}
+		catch( final InterruptedException exception ) {
+			Thread.currentThread().interrupt();
+			throw new NmsApiException( action + " was interrupted.", exception );
+		}
 	}
 
-	/**
-	 * Creates an understandable error for common HTTP status codes.
-	 */
-	private NmsApiException createHttpException( String action,
-												 HttpResponse<String> response )
+	private NmsHttpException createHttpException( final String action,
+			final HttpResponse<String> response )
 	{
-
-		int statusCode = response.statusCode();
-		String explanation;
-
+		final int statusCode = response.statusCode();
+		final String explanation;
 		if( statusCode == 400 ) {
 			explanation = "The FAA rejected the request format.";
 		}
@@ -326,19 +234,15 @@ public class NmsApiClient
 		else {
 			explanation = "The FAA API returned an unsuccessful response.";
 		}
-
-		return new NmsApiException( statusCode,
-				action + " failed with HTTP " + statusCode + ". "
-						+ explanation );
+		return new NmsHttpException( statusCode,
+				action + " failed with HTTP " + statusCode + ". " + explanation );
 	}
 
-	// HTTP status codes from 200 through 299 represent success.
-	private boolean isSuccessful( int statusCode )
+	private boolean isSuccessful( final int statusCode )
 	{
 		return statusCode >= 200 && statusCode < 300;
 	}
 
-	// Removes an expired or rejected access token.
 	private synchronized void clearCachedToken()
 	{
 		cachedAccessToken = null;
