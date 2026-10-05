@@ -11,19 +11,50 @@ This project focuses on finding and organizing Notices to Air Missions (NOTAMs) 
 - **FAA NOTAM API** - Retrieves every NOTAM that is relevant to a specific flight.
 
 ### **Development Tools**
+- **Apache Maven** - Builds the project, downloads dependencies, and runs tests.
 - **Git + GitHub** - Helps with managing project code and collaborating with team members.
 - **Jira** - Used for tracking project tasks and planning sprints.
 - **IDE:** VS Code - Serves as the main IDE for Java development and testing.
 
 ## Developer Documentation
-### **Setup Instructions**
-1. Clone the project using SSH or HTTPS:  
-   `git clone <repository-url>`
-2. Install Java 17 or higher.
-3. Open the project in VS Code (necessary extensions must be installed).
-4. Configure FAA API settings if required (API key or endpoint settings).
-5. Compile the project using your preferred method (VS Code build tools or javac).
-6. Run the program from the command line.
+### **Requirements**
+- **JDK 17 or newer**. The project targets Java 17, as configured in `pom.xml`.
+- **Apache Maven** installed, with its `bin` folder added to your system's `PATH` so the `mvn` command works.
+- **Git** installed to clone the repository.
+
+Set `JAVA_HOME` to your JDK installation folder. Open a new terminal after changing environment variables, then check your setup:
+
+```bash
+java -version
+javac -version
+mvn -version
+```
+
+The Java version shown by Maven must be 17 or newer. If `mvn` is not recognized, check that Maven's `bin` folder is on your `PATH` and reopen the terminal.
+
+### **Clone the Project**
+```bash
+git clone https://github.com/cs4273-fall26/notams-fall26.git
+cd notams-fall26
+```
+
+If you already cloned the project, open a terminal in your existing project folder instead. Run the commands below from the folder containing `pom.xml`.
+
+You can also open the folder in VS Code or IntelliJ. Configure the IDE to use JDK 17 or newer and import the project as a Maven project.
+
+### **Build the Project**
+```bash
+mvn clean package
+```
+
+This removes previous build output, compiles the code, runs the tests, and creates the JAR in `target/`. Maven downloads the required dependencies on the first run, so an internet connection is needed. A successful build ends with `BUILD SUCCESS`.
+
+### **Run the Tests**
+```bash
+mvn test
+```
+
+This compiles the code as needed and runs the unit tests through Maven. Check the test summary for failures or errors. Detailed test reports are saved in `target/surefire-reports/`.
 
 ## Goals & Progress Plan
 ### **Development Goals**
