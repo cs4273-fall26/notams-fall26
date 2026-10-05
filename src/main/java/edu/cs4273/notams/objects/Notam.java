@@ -1,4 +1,6 @@
-public class Notam{ 
+package edu.cs4273.notams.objects;
+
+public class Notam{
     private String notamId;
     private String notamText;
     private String location;
