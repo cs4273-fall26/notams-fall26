@@ -1,3 +1,4 @@
+package edu.cs4273.notams.api;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;

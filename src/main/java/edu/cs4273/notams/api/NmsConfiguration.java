@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;

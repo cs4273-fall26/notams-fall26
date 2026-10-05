@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 /**
  * An unsuccessful HTTP response received from FAA NMS.
  */

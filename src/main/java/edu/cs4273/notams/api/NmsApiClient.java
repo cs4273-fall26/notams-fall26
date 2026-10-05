@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;

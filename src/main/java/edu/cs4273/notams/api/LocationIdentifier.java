@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
