@@ -1,3 +1,5 @@
+package edu.cs4273.notams.input;
+
 import java.util.Scanner;
 
 // This program collects flight information from the user and prints it out.
