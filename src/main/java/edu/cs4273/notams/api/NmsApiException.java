@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 /**
  * A transport or response-processing failure while contacting FAA NMS.
  */

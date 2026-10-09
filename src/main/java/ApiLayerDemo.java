@@ -1,5 +1,12 @@
 import java.util.List;
 
+import edu.cs4273.notams.api.LocationIdentifier;
+import edu.cs4273.notams.api.NmsApiClient;
+import edu.cs4273.notams.api.NmsApiException;
+import edu.cs4273.notams.api.NmsConfiguration;
+import edu.cs4273.notams.api.NmsHttpException;
+import edu.cs4273.notams.api.RawNotamResponse;
+
 /**
  * Temporary API demo using command-line arguments, separate from CAP-19's
  * interactive input. Requires FAA_CLIENT_ID and FAA_CLIENT_SECRET; see README

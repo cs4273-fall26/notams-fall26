@@ -1,3 +1,5 @@
+package edu.cs4273.notams.api;
+
 import java.util.Objects;
 
 /**
