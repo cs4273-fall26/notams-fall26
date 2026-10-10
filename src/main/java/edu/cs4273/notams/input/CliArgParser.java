@@ -39,7 +39,7 @@ public class CliArgParser
 
 		// @formatter:off
 		final Option departureOption = Option.builder( "d" )
-				.longOpt( "depature" )
+				.longOpt( "departure" )
 				.hasArg()
 				.desc( "Departure airport code" )
 				.get();
@@ -77,7 +77,7 @@ public class CliArgParser
 				|| cmdLine.getOptions().length == 0 ) {
 			final HelpFormatter helpFormatter = HelpFormatter.builder().get();
 			try {
-				helpFormatter.printHelp( "CliAragParser",
+				helpFormatter.printHelp( "CliArgParser",
 						"CS4273 Group O Notam Prioritization System Options",
 						options,
 						"Please report any bugs to https://capstone-fall26.atlassian.net/jira/",
