@@ -1,7 +1,7 @@
 import java.util.List;
 
 import edu.cs4273.notams.api.LocationIdentifier;
-import edu.cs4273.notams.api.NmsApiClient;
+import edu.cs4273.notams.api.NmsApiAccess;
 import edu.cs4273.notams.api.NmsApiException;
 import edu.cs4273.notams.api.NmsConfiguration;
 import edu.cs4273.notams.api.NmsHttpException;
@@ -21,7 +21,7 @@ public class ApiLayerDemo
 					args.length >= 1 ? args[0] : "KOKC" );
 			final LocationIdentifier end = new LocationIdentifier(
 					args.length >= 2 ? args[1] : "KDFW" );
-			final NmsApiClient client = NmsConfiguration.fromEnvironment();
+			final NmsApiAccess client = NmsConfiguration.fromEnvironment();
 			System.out.println(
 					"Requesting NOTAMs for " + start.locationValue() + " to "
 							+ end.locationValue() + "..." );
@@ -57,7 +57,8 @@ public class ApiLayerDemo
 	 */
 	private static void printResponsePreview( final RawNotamResponse response )
 	{
-		System.out.println( "Location: " + response.location().locationValue() );
+		System.out.println(
+				"Location: " + response.location().locationValue() );
 		System.out.println(
 				"Raw response length: " + response.rawJson().length()
 						+ " characters" );
