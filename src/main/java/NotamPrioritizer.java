@@ -1,4 +1,5 @@
 import java.util.List;
+import edu.cs4273.notams.objects.Notam;
 
 public class NotamPrioritizer {
 
