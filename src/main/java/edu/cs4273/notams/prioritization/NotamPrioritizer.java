@@ -1,3 +1,4 @@
+package edu.cs4273.notams.prioritization;
 import java.util.List;
 
 import edu.cs4273.notams.objects.Notam;
