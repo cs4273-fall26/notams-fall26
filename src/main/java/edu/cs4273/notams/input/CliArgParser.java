@@ -9,6 +9,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class CliArgParser
 {
@@ -28,7 +29,7 @@ public class CliArgParser
 		}
 	}
 
-	public static void main( String[] args )
+	public static Pair<String, String> parse( String[] args )
 	{
 		// Options could be marked as "required" but this interferes with the
 		// ability to provide the help option (providing only `--help` means
@@ -89,7 +90,7 @@ public class CliArgParser
 				exitHandler.exit( 1 );
 			}
 			exitHandler.exit( 0 );
-			return;
+			return null;
 		}
 
 		final boolean deptProvided = cmdLine.hasOption( departureOption );
@@ -110,5 +111,6 @@ public class CliArgParser
 
 		System.out.println( "Departure code: " + departureCode );
 		System.out.println( "Destination code: " + destinationCode );
+		return Pair.of( departureCode, destinationCode );
 	}
 }
