@@ -2,21 +2,27 @@ package edu.cs4273.notams.input;
 
 import java.util.Scanner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 // This program collects flight information from the user and prints it out.
 public class UserNotamInput {
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            UserNotamInput.class);
+
     public static void main(String[] var0) {
         Scanner inputScanner = new Scanner(System.in);
-        System.out.println("Please enter your departure airport: ");
+        LOGGER.info("Please enter your departure airport: ");
         String startAirport = inputScanner.nextLine();
-        System.out.println("Please enter your destination airport: ");
+        LOGGER.info("Please enter your destination airport: ");
         String endAirport = inputScanner.nextLine();
-        System.out.println("Please enter your departure date(EX: YYYY-MM-DD): ");
+        LOGGER.info("Please enter your departure date(EX: YYYY-MM-DD): ");
         String departureDate = inputScanner.nextLine();
-        System.out.println("Please enter your departure time(EX: HH:MM): ");
+        LOGGER.info("Please enter your departure time(EX: HH:MM): ");
         String departureTime = inputScanner.nextLine();
-        System.out.println("Is your flight direct or a waypoint: ");
+        LOGGER.info("Is your flight direct or a waypoint: ");
         String flightType = inputScanner.nextLine();
-        System.out.println(
+        LOGGER.info(
                 startAirport + " " + endAirport + " " + departureDate + " " + departureTime + " " + flightType);
         inputScanner.close();
     }

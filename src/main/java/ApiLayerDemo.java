@@ -1,5 +1,8 @@
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.cs4273.notams.api.LocationIdentifier;
 import edu.cs4273.notams.api.NmsApiClient;
 import edu.cs4273.notams.api.NmsApiException;
@@ -14,6 +17,9 @@ import edu.cs4273.notams.api.RawNotamResponse;
  */
 public class ApiLayerDemo
 {
+	private static final Logger LOGGER = LoggerFactory.getLogger(
+			ApiLayerDemo.class );
+
 	public static void main( final String[] args )
 	{
 		try {
@@ -22,9 +28,8 @@ public class ApiLayerDemo
 			final LocationIdentifier end = new LocationIdentifier(
 					args.length >= 2 ? args[1] : "KDFW" );
 			final NmsApiClient client = NmsConfiguration.fromEnvironment();
-			System.out.println(
-					"Requesting NOTAMs for " + start.locationValue() + " to "
-							+ end.locationValue() + "..." );
+			LOGGER.info( "Requesting NOTAMs for {} to {}...", start.locationValue(),
+					end.locationValue() );
 			final List<RawNotamResponse> responses = client.fetchNotamsForRoute(
 					start, end );
 			for( final RawNotamResponse response : responses ) {
@@ -33,21 +38,21 @@ public class ApiLayerDemo
 						response.location().equals( start ) ?
 								"Start Location Response:" :
 								"End Location Response:";
-				System.out.println( label );
+				LOGGER.info( label );
 				printResponsePreview( response );
 			}
-			System.out.println( "API Layer test completed successfully." );
+			LOGGER.info( "API Layer test completed successfully." );
 		}
 		catch( final NmsHttpException exception ) {
-			System.err.println( "API Layer error: " + exception.getMessage() );
-			System.err.println( "HTTP status: " + exception.getStatusCode() );
+			LOGGER.error( "API Layer error: {}", exception.getMessage() );
+			LOGGER.error( "HTTP status: {}", exception.getStatusCode() );
 		}
 		catch( final NmsApiException exception ) {
-			System.err.println( "API Layer error: " + exception.getMessage() );
+			LOGGER.error( "API Layer error: {}", exception.getMessage() );
 		}
 		catch( final IllegalArgumentException exception ) {
-			System.err.println(
-					"Input or configuration error: " + exception.getMessage() );
+			LOGGER.error( "Input or configuration error: {}",
+					exception.getMessage() );
 		}
 	}
 
@@ -57,15 +62,14 @@ public class ApiLayerDemo
 	 */
 	private static void printResponsePreview( final RawNotamResponse response )
 	{
-		System.out.println( "Location: " + response.location().locationValue() );
-		System.out.println(
-				"Raw response length: " + response.rawJson().length()
-						+ " characters" );
+		LOGGER.info( "Location: {}", response.location().locationValue() );
+		LOGGER.info( "Raw response length: {} characters",
+				response.rawJson().length() );
 		final int previewLength = Math.min( 300, response.rawJson().length() );
-		System.out.println( "Response preview:" );
-		System.out.println( response.rawJson().substring( 0, previewLength ) );
+		LOGGER.info( "Response preview:" );
+		LOGGER.info( response.rawJson().substring( 0, previewLength ) );
 		if( response.rawJson().length() > previewLength ) {
-			System.out.println( "..." );
+			LOGGER.info( "..." );
 		}
 	}
 }
