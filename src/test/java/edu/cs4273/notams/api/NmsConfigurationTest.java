@@ -1,5 +1,4 @@
 package edu.cs4273.notams.api;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,38 +38,38 @@ class NmsConfigurationTest
 	@Test
 	void defaultsToStagingWhenProductionFlagIsMissing()
 	{
-		final NmsApiClient client =
+		final NmsApiAccess client =
 				NmsConfiguration.fromEnvironment(
 						Map.of(
 								"FAA_CLIENT_ID", "test-id",
 								"FAA_CLIENT_SECRET", "test-secret" ) );
 
-		assertNotNull( client );
+		assertTrue( client instanceof StagingNmsApiClient );
 	}
 
 	@Test
 	void usesStagingWhenProductionFlagIsFalse()
 	{
-		final NmsApiClient client =
+		final NmsApiAccess client =
 				NmsConfiguration.fromEnvironment(
 						Map.of(
 								"FAA_CLIENT_ID", "test-id",
 								"FAA_CLIENT_SECRET", "test-secret",
 								"USE_PRODUCTION_NMS_API", "false" ) );
 
-		assertNotNull( client );
+		assertTrue( client instanceof StagingNmsApiClient );
 	}
 
 	@Test
 	void usesProductionWhenProductionFlagIsTrue()
 	{
-		final NmsApiClient client =
+		final NmsApiAccess client =
 				NmsConfiguration.fromEnvironment(
 						Map.of(
 								"FAA_CLIENT_ID", "test-id",
 								"FAA_CLIENT_SECRET", "test-secret",
 								"USE_PRODUCTION_NMS_API", "true" ) );
 
-		assertNotNull( client );
+		assertTrue( client instanceof ProductionNmsApiClient );
 	}
 }
