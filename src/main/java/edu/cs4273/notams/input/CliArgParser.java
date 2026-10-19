@@ -2,6 +2,9 @@ package edu.cs4273.notams.input;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -12,6 +15,9 @@ import org.apache.commons.cli.help.HelpFormatter;
 
 public class CliArgParser
 {
+	private static final Logger LOGGER = LoggerFactory.getLogger(
+			CliArgParser.class );
+
 	// ExitHandler solely exists for unit testing
 	private static ExitHandler exitHandler = new ExitHandler();
 
@@ -69,7 +75,7 @@ public class CliArgParser
 			cmdLine = commandLineParser.parse( options, args );
 		}
 		catch( final ParseException e ) {
-			System.err.println( "Unable to parse command line arguments" );
+			LOGGER.error( "Unable to parse command line arguments", e );
 			throw new RuntimeException( e );
 		}
 
@@ -85,7 +91,7 @@ public class CliArgParser
 			}
 			catch( final IOException e ) {
 				// log and swallow exception, we're exiting anyway
-				System.err.println( "Unable to print help" );
+				LOGGER.error( "Unable to print help", e );
 				exitHandler.exit( 1 );
 			}
 			exitHandler.exit( 0 );
@@ -108,7 +114,7 @@ public class CliArgParser
 		final String destinationCode = cmdLine.getOptionValue(
 				destinationOption );
 
-		System.out.println( "Departure code: " + departureCode );
-		System.out.println( "Destination code: " + destinationCode );
+		LOGGER.info( "Departure code: {}", departureCode );
+		LOGGER.info( "Destination code: {}", destinationCode );
 	}
 }
