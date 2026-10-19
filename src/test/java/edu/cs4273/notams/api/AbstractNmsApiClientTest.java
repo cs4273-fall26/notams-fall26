@@ -1,5 +1,4 @@
 package edu.cs4273.notams.api;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,20 +20,27 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-
 import org.junit.jupiter.api.AfterEach;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class NmsApiClientTest
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+
+class AbstractNmsApiClientTest
 {
 	private HttpServer server;
 	private URI base;
-	private NmsApiClient client;
+	private AbstractNmsApiClient client;
 	private final AtomicInteger tokenRequests = new AtomicInteger();
 	private final AtomicInteger notamRequests = new AtomicInteger();
 	private final List<String> queries = Collections.synchronizedList(
@@ -101,11 +107,34 @@ class NmsApiClientTest
 		server.stop( 0 );
 	}
 
-	private NmsApiClient newClient( final Duration timeout )
+	private AbstractNmsApiClient newClient( final Duration timeout )
 	{
-		return new NmsApiClient( " id ", " secret ", base.resolve( "/token" ),
-				base.resolve( "/notams" ), HttpClient.newHttpClient(), clock,
-				timeout );
+		return new TestNmsApiClient( " id ", " secret ",
+				base.resolve( "/token" ), base.resolve( "/notams" ),
+				HttpClient.newHttpClient(), clock, timeout );
+	}
+
+	private static final class TestNmsApiClient extends AbstractNmsApiClient
+	{
+		TestNmsApiClient( final String clientId,
+						  final String clientSecret,
+						  final URI tokenUri,
+						  final URI notamUri )
+		{
+			super( clientId, clientSecret, tokenUri, notamUri );
+		}
+
+		TestNmsApiClient( final String clientId,
+						  final String clientSecret,
+						  final URI tokenUri,
+						  final URI notamUri,
+						  final HttpClient httpClient,
+						  final Clock clock,
+						  final Duration requestTimeout )
+		{
+			super( clientId, clientSecret, tokenUri, notamUri, httpClient,
+					clock, requestTimeout );
+		}
 	}
 
 	private static void respond( final HttpExchange exchange,
@@ -154,7 +183,8 @@ class NmsApiClientTest
 				new LocationIdentifier( "KOKC" ),
 				new LocationIdentifier( "KDFW" ) );
 		assertEquals( List.of( "KOKC", "KDFW" ), responses.stream()
-				.map( response -> response.location().locationValue() ).toList() );
+				.map( response -> response.location().locationValue() )
+				.toList() );
 		assertEquals( List.of( "location=KOKC", "location=KDFW" ), queries );
 		assertEquals( 1, tokenRequests.get() );
 		assertEquals( 2, notamRequests.get() );
@@ -309,7 +339,7 @@ class NmsApiClientTest
 		try (final ServerSocket socket = new ServerSocket( 0 )) {
 			unusedPort = socket.getLocalPort();
 		}
-		client = new NmsApiClient( "id", "secret",
+		client = new TestNmsApiClient( "id", "secret",
 				URI.create( "http://127.0.0.1:" + unusedPort + "/token" ),
 				base.resolve( "/notams" ) );
 		final NmsApiException exception = assertThrows( NmsApiException.class,
