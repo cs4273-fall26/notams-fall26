@@ -27,6 +27,11 @@ public class CliArgParser
 		CliArgParser.exitHandler = exitHandler;
 	}
 
+	public static void main( final String[] args )
+	{
+		parse( args );
+	}
+
 	public static class ExitHandler
 	{
 		public void exit( final int exitCode )
