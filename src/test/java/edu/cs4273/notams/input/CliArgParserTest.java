@@ -1,16 +1,41 @@
 package edu.cs4273.notams.input;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.UnrecognizedOptionException;
 import org.junit.jupiter.api.Test;
 
 public class CliArgParserTest
 {
+	private static Throwable assertCause( final RuntimeException thrown,
+			final Class<? extends ParseException> expected )
+	{
+		final Throwable cause = thrown.getCause();
+		assertNotNull( cause, "Expected a cause inside RuntimeException" );
+		assertEquals( expected, cause.getClass(),
+				"Cause should be exactly " + expected.getSimpleName() );
+		return cause;
+	}
+
+	private static void assertMissingRequired( final RuntimeException thrown,
+			final String missing, final String provided )
+	{
+		final String message = assertCause( thrown, ParseException.class )
+				.getMessage();
+		assertTrue( message.contains( missing ),
+				"Message should name " + missing + ": " + message );
+		assertFalse( message.contains( provided ),
+				"Message should not name " + provided + ": " + message );
+	}
+
 	@Test
 	public void testMissingDestinationThrowsException()
 	{
@@ -19,11 +44,7 @@ public class CliArgParserTest
 			final String[] params = { "--departure", "okc" };
 			CliArgParser.main( params );
 		} );
-
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertMissingRequired( thrown, "--destination", "--departure" );
 	}
 
 	@Test
@@ -33,10 +54,7 @@ public class CliArgParserTest
 			final String[] params = { "-d", "okc" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertMissingRequired( thrown, "--destination", "--departure" );
 	}
 
 	@Test
@@ -47,10 +65,7 @@ public class CliArgParserTest
 			final String[] params = { "--destination", "okc" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertMissingRequired( thrown, "--departure", "--destination" );
 	}
 
 	@Test
@@ -60,10 +75,7 @@ public class CliArgParserTest
 			final String[] params = { "-a", "okc" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertMissingRequired( thrown, "--departure", "--destination" );
 	}
 
 	@Test
@@ -73,10 +85,7 @@ public class CliArgParserTest
 			final String[] params = { "--departure" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertCause( thrown, MissingArgumentException.class );
 	}
 
 	@Test
@@ -86,10 +95,7 @@ public class CliArgParserTest
 			final String[] params = { "--destination" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertCause( thrown, MissingArgumentException.class );
 	}
 
 	@Test
@@ -122,10 +128,7 @@ public class CliArgParserTest
 			final String[] params = { "--clowns", "all-of-them" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertCause( thrown, UnrecognizedOptionException.class );
 	}
 
 	@Test
@@ -136,9 +139,16 @@ public class CliArgParserTest
 					"dfw", "--clowns", "all-of-them" };
 			CliArgParser.main( params );
 		} );
-		Throwable cause = thrown.getCause();
-		assertNotNull( cause, "Expected a cause inside RuntimeException" );
-		assertInstanceOf( ParseException.class, cause,
-				"Cause should be a ParseException" );
+		assertCause( thrown, UnrecognizedOptionException.class );
+	}
+
+	@Test
+	public void testWrongShortOptionIsNotReportedAsMissing()
+	{
+		RuntimeException thrown = assertThrows( RuntimeException.class, () -> {
+			final String[] params = { "-D", "okc" };
+			CliArgParser.main( params );
+		} );
+		assertCause( thrown, UnrecognizedOptionException.class );
 	}
 }
