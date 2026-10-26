@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 public class CliArgParserTest
 {
 	private static Throwable assertCause( final RuntimeException thrown,
-			final Class<? extends ParseException> expected )
+	                                      final Class<? extends ParseException> expected )
 	{
 		final Throwable cause = thrown.getCause();
 		assertNotNull( cause, "Expected a cause inside RuntimeException" );
@@ -26,10 +26,11 @@ public class CliArgParserTest
 	}
 
 	private static void assertMissingRequired( final RuntimeException thrown,
-			final String missing, final String provided )
+	                                           final String missing,
+	                                           final String provided )
 	{
-		final String message = assertCause( thrown, ParseException.class )
-				.getMessage();
+		final String message = assertCause( thrown,
+				ParseException.class ).getMessage();
 		assertTrue( message.contains( missing ),
 				"Message should name " + missing + ": " + message );
 		assertFalse( message.contains( provided ),
