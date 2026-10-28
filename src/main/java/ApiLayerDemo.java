@@ -1,5 +1,11 @@
 import java.util.List;
 
+import edu.cs4273.notams.parsing.RawNotamResponseParser;
+import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
+import edu.cs4273.notams.objects.Notam;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +44,44 @@ public class ApiLayerDemo
 						response.location().equals( start ) ?
 								"Start Location Response:" :
 								"End Location Response:";
-				LOGGER.info( label );
-				printResponsePreview( response );
+				System.out.println();
+				System.out.println( "==================================================" );
+				System.out.println( label + " " + response.location().locationValue() );
+				System.out.println( "==================================================" );
+
+				// printResponsePreview( response );
+				try {
+					final RawNotamResponseParser parser =
+							new RawNotamResponseParser();
+
+					final List<Notam> notams = parser.parse( response );
+					final KeywordNotamPrioritizer prioritizer =
+							new KeywordNotamPrioritizer();
+
+					prioritizer.prioritize( notams );
+
+					LOGGER.info( "Parsed NOTAMs: {}", notams.size() );
+					final int limit = Math.min( 10, notams.size() );
+
+					for( int i = 0; i < limit; i++ ) {
+						final Notam notam = notams.get( i );
+
+						System.out.println();
+						System.out.println( "---------- NOTAM " + ( i + 1 ) + " ----------" );
+						System.out.println( "ID: " + notam.getNotamId() );
+						System.out.println( "Text: " + notam.getNotamText() );
+						System.out.println( "Location: " + notam.getLocation() );
+						System.out.println( "Start: " + notam.getStartTime() );
+						System.out.println( "End: " + notam.getEndTime() );
+					}
+
+					System.out.println();
+					System.out.println( "Showing " + limit + " of " + notams.size() + " NOTAMs." );
+				}
+				catch( final JsonProcessingException | IllegalArgumentException e ) {
+					LOGGER.error( "Failed to parse NOTAMs: {}", e.getMessage() );
+					return;
+				}
 			}
 			LOGGER.info( "API Layer test completed successfully." );
 		}
