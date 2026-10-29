@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -21,23 +23,32 @@ import edu.cs4273.notams.prioritization.TextLengthNotamPrioritizer;
 
 public class EndToEndRunner
 {
+	private static final Logger LOGGER = LoggerFactory.getLogger(
+			EndToEndRunner.class );
+
 	public static void main( String[] args )
 	{
 		// parse departure/destination airport code input
 		final Pair<String, String> input = CliArgParser.parse( args );
-		final String departureCode = input.getLeft();
-		final String destinationCode = input.getRight();
-
-		System.out.println( departureCode );
-		System.out.println( destinationCode );
+		LOGGER.info( "Departure code: {}", input.getLeft() );
+		LOGGER.info( "Destination code: {}", input.getRight() );
 
 		// call the API
 		final NmsApiAccess apiClient = NmsConfiguration.fromEnvironment();
+		final List<Notam> prioritizedList = process( input, apiClient );
 
+		// output prioritized notams
+		final NotamOutput output = new NotamOutput();
+		output.render( prioritizedList );
+	}
+
+	static List<Notam> process( final Pair<String, String> input,
+			final NmsApiAccess apiClient )
+	{
 		final LocationIdentifier departure = new LocationIdentifier(
-				departureCode );
+				input.getLeft() );
 		final LocationIdentifier destination = new LocationIdentifier(
-				destinationCode );
+				input.getRight() );
 
 		List<RawNotamResponse> rawResponseList;
 		try {
@@ -47,6 +58,7 @@ public class EndToEndRunner
 		catch( final NmsApiException e ) {
 			throw new RuntimeException( e );
 		}
+		// parse raw API responses into NOTAM objects
 		final RawNotamResponseParser parser = new RawNotamResponseParser();
 		final List<Notam> notams = new ArrayList<>();
 		for( final RawNotamResponse rawResponse : rawResponseList ) {
@@ -63,8 +75,6 @@ public class EndToEndRunner
 		final NotamPrioritizer prioritizer = new TextLengthNotamPrioritizer();
 		final List<Notam> prioritizedList = prioritizer.prioritize( notams );
 
-		// output prioritized notams
-		final NotamOutput output = new NotamOutput();
-		output.render( prioritizedList );
+		return prioritizedList;
 	}
 }
