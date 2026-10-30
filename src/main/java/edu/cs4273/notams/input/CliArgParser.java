@@ -2,9 +2,6 @@ package edu.cs4273.notams.input;
 
 import java.io.IOException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -13,6 +10,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CliArgParser
 {
@@ -116,9 +115,16 @@ public class CliArgParser
 			// @formatter:on
 		}
 
-		final String departureCode = cmdLine.getOptionValue( departureOption );
-		final String destinationCode = cmdLine.getOptionValue(
-				destinationOption );
+		String departureCode = cmdLine.getOptionValue( departureOption );
+		String destinationCode = cmdLine.getOptionValue( destinationOption );
+
+		// Strip leading character if code length is greater than 3 to remove location identifer from ICAO codes
+		if( departureCode.length() > 3 ) {
+			departureCode = departureCode.substring( 1 );
+		}
+		if( destinationCode.length() > 3 ) {
+			destinationCode = destinationCode.substring( 1 );
+		}
 
 		LOGGER.info( "Departure code: {}", departureCode );
 		LOGGER.info( "Destination code: {}", destinationCode );
