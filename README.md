@@ -56,6 +56,19 @@ mvn test
 
 This compiles the code as needed and runs the unit tests through Maven. Check the test summary for failures or errors. Detailed test reports are saved in `target/surefire-reports/`.
 
+### **EndToEndRunner**
+```bash
+export FAA_CLIENT_ID="your-client-id"
+export FAA_CLIENT_SECRET="your-client-secret"
+mvn compile exec:java \
+-Dexec.mainClass="edu.cs4273.notams.EndToEndRunner"\
+-Dexec.args="--departure departureAirport --destination destinationAirport"
+```
+
+This is the minimum viable product for this project. It takes a departure and destination airport, fetches notams from the FAA API, and prints them a prioritized list. 
+
+Set your FAA API credentials in the terminal session first(they are not persistent between sessions)
+
 ## Goals & Progress Plan
 ### **Development Goals**
 - Retrieves NOTAMs based on the flight path.
