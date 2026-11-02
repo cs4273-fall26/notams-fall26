@@ -3,11 +3,16 @@ package edu.cs4273.notams.input;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.apache.commons.cli.ParseException;
 import org.junit.jupiter.api.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 public class CliArgParserTest
 {
@@ -140,5 +145,74 @@ public class CliArgParserTest
 		assertNotNull( cause, "Expected a cause inside RuntimeException" );
 		assertInstanceOf( ParseException.class, cause,
 				"Cause should be a ParseException" );
+	}
+
+	@Test
+	public void testValidShortOptions()
+	{
+		final String[] params = { "-d", "okc", "-a", "dfw" };
+
+		assertDoesNotThrow( () -> CliArgParser.main( params ) );
+	}
+
+	@Test
+	public void testMixedShortAndLongOptions()
+	{
+		final String[] params = { "-d", "okc", "--destination", "dfw" };
+
+		assertDoesNotThrow( () -> CliArgParser.main( params ) );
+	}
+
+	@Test
+	public void testShortOptionsReversedOrder()
+	{
+		final String[] params = { "-a", "dfw", "-d", "okc" };
+
+		assertDoesNotThrow( () -> CliArgParser.main( params ) );
+	}
+
+	@Test
+	public void testShortHelp()
+	{
+		CliArgParser.ExitHandler exitHandler =
+				mock( CliArgParser.ExitHandler.class );
+
+		CliArgParser.setExitHandler( exitHandler );
+
+		final String[] params = { "-h" };
+
+		CliArgParser.main( params );
+
+		verify( exitHandler ).exit( 0 );
+	}
+
+	@Test
+	@ResourceLock("SYSTEM_OUT")
+	public void testDepartureAndDestinationNotSwapped()
+	{
+		final String[] params = {
+			"--departure", "okc",
+			"--destination", "dfw"
+		};
+
+		// Capture the console output
+		PrintStream originalOut = System.out;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+		try {
+			System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+
+			CliArgParser.main(params);
+
+			String consoleOutput = output.toString(StandardCharsets.UTF_8);
+
+			// Check that the correct airport codes were recorded
+			assertTrue(consoleOutput.contains("Departure code: okc"));
+			assertTrue(consoleOutput.contains("Destination code: dfw"));
+		}
+		finally {
+			// Restore the original console output
+			System.setOut(originalOut);
+		}
 	}
 }
