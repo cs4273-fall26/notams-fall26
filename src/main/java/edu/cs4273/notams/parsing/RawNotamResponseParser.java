@@ -29,7 +29,12 @@ public class RawNotamResponseParser
 					"FAA response is empty" );
 		}
 
-		final JsonNode geojson = root.path( "data" ).path( "geojson" );
+		final JsonNode data = root.path( "data" );
+		final JsonNode geojson = data.path( "geojson" );
+
+		if( data.isObject() && data.isEmpty() ) {
+			return new ArrayList<>();
+		}
 
 		if( !geojson.isArray() ) {
 			throw new IllegalArgumentException(

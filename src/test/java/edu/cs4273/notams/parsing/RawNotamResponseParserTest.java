@@ -124,6 +124,17 @@ public class RawNotamResponseParserTest
 	}
 
 	@Test
+	public void testEmptyDataObjectReturnsNoNotams() throws Exception
+	{
+		final RawNotamResponse response =
+				new RawNotamResponse(
+						new LocationIdentifier( "2CO2" ),
+						"{\"status\":\"Success\",\"data\":{}}" );
+
+		assertTrue( parser.parse( response ).isEmpty() );
+	}
+
+	@Test
 	public void testMissingGeojson()
 	{
 		final RawNotamResponse response =
