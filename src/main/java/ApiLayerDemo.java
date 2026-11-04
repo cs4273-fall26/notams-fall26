@@ -1,5 +1,10 @@
 import java.util.List;
 
+import edu.cs4273.notams.parsing.RawNotamResponseParser;
+import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
+import edu.cs4273.notams.objects.Notam;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,19 +33,61 @@ public class ApiLayerDemo
 			final LocationIdentifier end = new LocationIdentifier(
 					args.length >= 2 ? args[1] : "KDFW" );
 			final NmsApiAccess client = NmsConfiguration.fromEnvironment();
-			LOGGER.info( "Requesting NOTAMs for {} to {}...", start.locationValue(),
-					end.locationValue() );
+
+			LOGGER.info( "Requesting NOTAMs for {} to {}...",
+					start.locationValue(), end.locationValue() );
+
 			final List<RawNotamResponse> responses = client.fetchNotamsForRoute(
 					start, end );
+
 			for( final RawNotamResponse response : responses ) {
 				final String label = start.equals( end ) ?
 						"Start and End Location Response:" :
 						response.location().equals( start ) ?
 								"Start Location Response:" :
 								"End Location Response:";
-				LOGGER.info( label );
-				printResponsePreview( response );
+
+				LOGGER.info( "" );
+				LOGGER.info( "==================================================" );
+				LOGGER.info( "{} {}", label, response.location().locationValue() );
+				LOGGER.info( "==================================================" );
+
+				// printResponsePreview( response );
+				try {
+					final RawNotamResponseParser parser =
+							new RawNotamResponseParser();
+
+					final List<Notam> notams = parser.parse( response );
+					final KeywordNotamPrioritizer prioritizer =
+							new KeywordNotamPrioritizer();
+
+					prioritizer.prioritize( notams );
+
+					LOGGER.info( "Parsed NOTAMs: {}", notams.size() );
+					final int limit = Math.min( 10, notams.size() );
+
+					for( int i = 0; i < limit; i++ ) {
+						final Notam notam = notams.get( i );
+
+						LOGGER.info( "" );
+						LOGGER.info( "---------- NOTAM {} ----------", i + 1 );
+						LOGGER.info( "ID: {}", notam.getNotamId() );
+						LOGGER.info( "Text: {}", notam.getNotamText() );
+						LOGGER.info( "Location: {}", notam.getLocation() );
+						LOGGER.info( "Start: {}", notam.getStartTime() );
+						LOGGER.info( "End: {}", notam.getEndTime() );
+					}
+
+					LOGGER.info( "" );
+					LOGGER.info( "Showing {} of {} NOTAMs.",
+							limit, notams.size() );
+				}
+				catch( final JsonProcessingException | IllegalArgumentException e ) {
+					LOGGER.error( "Failed to parse NOTAMs: {}", e.getMessage() );
+					return;
+				}
 			}
+
 			LOGGER.info( "API Layer test completed successfully." );
 		}
 		catch( final NmsHttpException exception ) {
@@ -67,7 +114,7 @@ public class ApiLayerDemo
 				response.rawJson().length() );
 		final int previewLength = Math.min( 300, response.rawJson().length() );
 		LOGGER.info( "Response preview:" );
-		LOGGER.info( response.rawJson().substring( 0, previewLength ) );
+		LOGGER.info( "{}", response.rawJson().substring( 0, previewLength ) );
 		if( response.rawJson().length() > previewLength ) {
 			LOGGER.info( "..." );
 		}
