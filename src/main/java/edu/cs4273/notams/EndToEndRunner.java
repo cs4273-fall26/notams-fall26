@@ -20,7 +20,6 @@ import edu.cs4273.notams.output.NotamOutput;
 import edu.cs4273.notams.parsing.RawNotamResponseParser;
 import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
 import edu.cs4273.notams.prioritization.NotamPrioritizer;
-import edu.cs4273.notams.prioritization.TextLengthNotamPrioritizer;
 
 public class EndToEndRunner
 {
@@ -74,7 +73,7 @@ public class EndToEndRunner
 		}
 
 		// prioritize the notams based on text length
-		final NotamPrioritizer prioritizer = new TextLengthNotamPrioritizer();
+		final NotamPrioritizer prioritizer = new KeywordNotamPrioritizer();
 		final List<Notam> prioritizedList = prioritizer.prioritize( notams );
 
 		return prioritizedList;
