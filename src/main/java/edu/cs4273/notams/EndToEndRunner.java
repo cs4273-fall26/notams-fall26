@@ -18,6 +18,7 @@ import edu.cs4273.notams.input.CliArgParser;
 import edu.cs4273.notams.objects.Notam;
 import edu.cs4273.notams.output.NotamOutput;
 import edu.cs4273.notams.parsing.RawNotamResponseParser;
+import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
 import edu.cs4273.notams.prioritization.NotamPrioritizer;
 import edu.cs4273.notams.prioritization.TextLengthNotamPrioritizer;
 
@@ -43,7 +44,8 @@ public class EndToEndRunner
 				apiClient );
 
 		// output prioritized notams
-		final NotamOutput output = new NotamOutput();
+		final NotamOutput output = new NotamOutput(
+				new KeywordNotamPrioritizer()::getPriority );
 		output.render( prioritizedList );
 	}
 
