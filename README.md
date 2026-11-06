@@ -65,9 +65,19 @@ mvn compile exec:java \
     -Dexec.args="--departure departureAirport --destination destinationAirport"
 ```
 
-This is the minimum viable product for this project. It takes a departure and destination airport, fetches notams from the FAA API, and prints them a prioritized list. 
+The end to end runner takes a departure and destination airport, fetches notams from the FAA API, and prints them in a prioritized list. 
 
 Set your FAA API credentials in the terminal session first(they are not persistent between sessions)
+
+### **Notam Prioritization Strategy**
+`KeywordNotamPrioritizer.java` will sort the notams into three priority levels
+
+1. Highest: Notices affecting aerodrome/airport (AD), runway (RWY), airspace activity, and security notices
+2. Standard: Notices related to navigation aids (NAV), communications (COM), instrument procedures (IAP, ODP, SID, and STAR), obstructions (OBST), routes, and charts
+3. Lower: Notices affecting taxiways (TWY), aprons, and services (SVC)
+
+This prioritizer is responsible for assigning each notam a priority based on the first recognized token. If there is a missing/unknown token, then it will mark it as a standard priority so that the pilot will be able to view them.
+
 
 ## Goals & Progress Plan
 ### **Development Goals**
@@ -80,7 +90,7 @@ Set your FAA API credentials in the terminal session first(they are not persiste
 ### **Progress Plan**
 - **Sprint 1:** Determine project architecture, review FAA API, complete setup of tools
 - **Sprint 2:** Implement the NOTAM data retrieval and establish the parsing features
-- **Sprint 3:** Add priority classification for NOTAMs, improve the output format for better readability, and possibly adding web implementation based on the group's progress
+- **Sprint 3:** Complete the priority classification strategy, improve the output format for better readability, and possibly add web implementation based on the group's progress
 - **Sprint 4:** Prepare for the final submission by thoroughly testing project and refining the overall functionality
 
 ## Contributors
