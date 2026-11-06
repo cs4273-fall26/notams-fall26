@@ -1,5 +1,8 @@
 package edu.cs4273.notams.api;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,5 +26,24 @@ class LocationIdentifierTest
 	{
 		assertThrows( IllegalArgumentException.class,
 				() -> new LocationIdentifier( input ) );
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "OKC", "KOKC", "DFW", "KDFW", "DCA", "KDCA",
+			"1A2" })
+	void continentalUsAirportsAreAccepted( final String input )
+	{
+		assertEquals( input, new LocationIdentifier( input ).locationValue() );
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "PANC", "ANC", "PHNL", "HNL", "TJSJ", "SJU",
+			"PWAK", "MMMY", "CYYZ", "ZZZZ" })
+	void airportsOutsideContinentalUsAreRejected( final String input )
+	{
+		final IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> new LocationIdentifier( input ) );
+		assertTrue( thrown.getMessage().contains( "continental US" ) );
 	}
 }
