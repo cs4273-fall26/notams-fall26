@@ -123,6 +123,58 @@ public abstract class AbstractNmsApiClient
 				Objects.requireNonNull( location, "location" ) ) );
 	}
 
+	/**
+	 * Fetches raw NOTAM JSON within a radius in nautical miles.
+	 */
+	public String fetchNotamsByArea( final double latitude,
+									 final double longitude,
+									 final double radiusNauticalMiles )
+			throws NmsApiException
+	{
+		if( !Double.isFinite( latitude ) ||
+				latitude < -90 || latitude > 90 ) {
+			throw new IllegalArgumentException(
+					"Latitude must be between -90 and 90." );
+		}
+		if( !Double.isFinite( longitude ) ||
+				longitude < -180 || longitude > 180 ) {
+			throw new IllegalArgumentException(
+					"Longitude must be between -180 and 180." );
+		}
+		if( !Double.isFinite( radiusNauticalMiles ) ||
+				radiusNauticalMiles < 0 || radiusNauticalMiles > 100 ) {
+			throw new IllegalArgumentException(
+					"Radius must be between 0 and 100 nautical miles." );
+		}
+
+		final URI requestUri = URI.create(
+				notamUri + "?latitude=" + latitude
+						+ "&longitude=" + longitude
+						+ "&radius=" + radiusNauticalMiles );
+
+		HttpResponse<String> response = sendAreaRequest( requestUri );
+		if( response.statusCode() == 401 ) {
+			clearCachedToken();
+			response = sendAreaRequest( requestUri );
+		}
+		if( !isSuccessful( response.statusCode() ) ) {
+			throw createHttpException( "NOTAM area request", response );
+		}
+
+		return response.body();
+	}
+
+	private HttpResponse<String> sendAreaRequest( final URI requestUri )
+			throws NmsApiException
+	{
+		final HttpRequest request = HttpRequest.newBuilder( requestUri )
+				.timeout( requestTimeout )
+				.header( "Authorization", "Bearer " + getAccessToken() )
+				.header( "Accept", "application/json" )
+				.header( "nmsResponseFormat", "GEOJSON" ).GET().build();
+		return sendRequest( request, "FAA NOTAM area request" );
+	}
+
 	private RawNotamResponse fetchResponse( final LocationIdentifier location ) // Fetches the raw NOTAM response for a specific location
 			throws NmsApiException
 	{

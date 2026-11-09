@@ -1,4 +1,6 @@
 package edu.cs4273.notams.output;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -13,28 +15,34 @@ public class NotamOutput
 
 	public void render( List<Notam> notams )
 	{
-		// Checks if the NOTAMs are empty
+		for( String line : formatLines( notams ) ) {
+			LOGGER.info( "{}", line );
+		}
+	}
+
+	public List<String> formatLines( List<Notam> notams )
+	{
 		if( notams == null || notams.isEmpty() ) {
-			LOGGER.info( "There are no NOTAMs available." );
-			return;
+			return List.of( "There are no NOTAMs available." );
 		}
 
-		LOGGER.info( "Prioritized NOTAMs:\n" );
+		final List<String> lines = new ArrayList<>();
+		lines.add( "Prioritized NOTAMs:" );
+		lines.add( "" );
 
 		int index = 1;
 		for( Notam n : notams ) {
-
-			// Print the NOTAM index and ID
-			LOGGER.info( "{}. {}", index, n.getNotamId() );
-
-			// Print the NOTAM Fields
-			LOGGER.info( "Description: {}", n.getNotamText() );
-			LOGGER.info( "Location: {}", n.getLocation() );
-			LOGGER.info( "Start: {}", n.getStartTime() );
-			LOGGER.info( "End: {}", n.getEndTime() );
-			LOGGER.info( "" );
-
+			lines.add( index + ". " + n.getNotamId() );
+			lines.add( "Number: " + n.getNumber() );
+			lines.add( "Classification: " + n.getClassification() );
+			lines.add( "Description: " + n.getNotamText() );
+			lines.add( "Location: " + n.getLocation() );
+			lines.add( "Start: " + n.getStartTime() );
+			lines.add( "End: " + n.getEndTime() );
+			lines.add( "" );
 			index++;
 		}
+
+		return lines;
 	}
 }

@@ -11,7 +11,7 @@ import edu.cs4273.notams.api.NmsApiAccess;
 import edu.cs4273.notams.api.NmsApiException;
 import edu.cs4273.notams.api.RawNotamResponse;
 import edu.cs4273.notams.objects.Notam;
-
+import edu.cs4273.notams.api.AirportCoordinateLookup;
 class EndToEndRunnerTest
 {
 	@Test
@@ -23,44 +23,44 @@ class EndToEndRunnerTest
 		final LocationIdentifier destination = new LocationIdentifier( "KDEN" );
 		final RawNotamResponse departureResponse = new RawNotamResponse(
 				departure, """
-						{
-						  "data": {
-						    "geojson": [
-						      {
-						        "properties": {
-						          "coreNOTAMData": {
-						            "notam": {
-						              "id": "LONG",
-						              "text": "RUNWAY 18 CLOSED FOR MAINTENANCE",
-						              "effectiveStart": "2026-10-19T10:00:00Z",
-						              "effectiveEnd": "2026-10-20T10:00:00Z"
-						            }
-						          }
-						        }
-						      }
-						    ]
-						  }
-						}
-						""" );
+                   {
+                     "data": {
+                       "geojson": [
+                         {
+                           "properties": {
+                             "coreNOTAMData": {
+                               "notam": {
+                                 "id": "LONG",
+                                 "text": "RUNWAY 18 CLOSED FOR MAINTENANCE",
+                                 "effectiveStart": "2026-10-19T10:00:00Z",
+                                 "effectiveEnd": "2026-10-20T10:00:00Z"
+                               }
+                             }
+                           }
+                         }
+                       ]
+                     }
+                   }
+                   """ );
 		final RawNotamResponse destinationResponse = new RawNotamResponse(
 				destination, """
-						{
-						  "data": {
-						    "geojson": [
-						      {
-						        "properties": {
-						          "coreNOTAMData": {
-						            "notam": {
-						              "id": "SHORT",
-						              "text": "TAXIWAY A CLOSED"
-						            }
-						          }
-						        }
-						      }
-						    ]
-						  }
-						}
-						""" );
+                   {
+                     "data": {
+                       "geojson": [
+                         {
+                           "properties": {
+                             "coreNOTAMData": {
+                               "notam": {
+                                 "id": "SHORT",
+                                 "text": "TAXIWAY A CLOSED"
+                               }
+                             }
+                           }
+                         }
+                       ]
+                     }
+                   }
+                   """ );
 		final RecordingApiClient apiClient = new RecordingApiClient(
 				List.of( departureResponse, destinationResponse ) );
 
@@ -77,6 +77,123 @@ class EndToEndRunnerTest
 		assertEquals( "LONG", result.get( 1 ).getNotamId() );
 		assertEquals( "2026-10-19T10:00:00Z",
 				result.get( 1 ).getStartTime() );
+	}
+
+	@Test
+	void processIncludesAreaNotamsAndRemovesRepeatedIds()
+	{
+		final LocationIdentifier departure =
+				new LocationIdentifier( "ICT" );
+		final LocationIdentifier destination =
+				new LocationIdentifier( "OKC" );
+
+		final String airportJson = """
+                {
+                  "data": {
+                    "geojson": [
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "AIRPORT",
+                              "text": "RWY CLSD",
+                              "icaoLocation": "KICT"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """;
+
+		final String areaJson = """
+                {
+                  "data": {
+                    "geojson": [
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "AIRPORT",
+                              "text": "RWY CLSD",
+                              "icaoLocation": "KICT"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "NEARBY",
+                              "text": "OBST TOWER LGT U/S",
+                              "icaoLocation": "KAAO"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """;
+
+		final List<AirportCoordinateLookup.Coordinates> requestedPoints =
+				new java.util.ArrayList<>();
+
+		final NmsApiAccess apiClient = new NmsApiAccess()
+		{
+			@Override
+			public List<RawNotamResponse> fetchNotamsForRoute(
+					final LocationIdentifier start,
+					final LocationIdentifier end )
+			{
+				return List.of(
+						new RawNotamResponse( start, airportJson ) );
+			}
+
+			@Override
+			public List<RawNotamResponse> fetchNotamsByLocation(
+					final LocationIdentifier location )
+			{
+				return List.of();
+			}
+
+			@Override
+			public String fetchNotamsByArea(
+					final double latitude,
+					final double longitude,
+					final double radiusNauticalMiles )
+			{
+				assertEquals( 50.0, radiusNauticalMiles, 0.000005 );
+				requestedPoints.add(
+						new AirportCoordinateLookup.Coordinates(
+								latitude, longitude ) );
+				return areaJson;
+			}
+		};
+
+		final List<Notam> result = EndToEndRunner.process(
+				departure, destination, apiClient );
+
+		assertEquals( 2, result.size() );
+		assertEquals( "AIRPORT", result.get( 0 ).getNotamId() );
+		assertEquals( "NEARBY", result.get( 1 ).getNotamId() );
+		assertEquals( "KAAO", result.get( 1 ).getLocation() );
+
+		org.junit.jupiter.api.Assertions.assertTrue(
+				requestedPoints.size() > 2 );
+
+		assertEquals( 37.650314,
+				requestedPoints.get( 0 ).latitude(), 0.000001 );
+		assertEquals( -97.428583,
+				requestedPoints.get( 0 ).longitude(), 0.000001 );
+
+		final AirportCoordinateLookup.Coordinates last =
+				requestedPoints.get( requestedPoints.size() - 1 );
+
+		assertEquals( 35.393388, last.latitude(), 0.000001 );
+		assertEquals( -97.598248, last.longitude(), 0.000001 );
 	}
 
 	private static final class RecordingApiClient implements NmsApiAccess
@@ -108,6 +225,22 @@ class EndToEndRunnerTest
 				throws NmsApiException
 		{
 			return List.of();
+		}
+
+		@Override
+		public String fetchNotamsByArea(
+				final double latitude,
+				final double longitude,
+				final double radiusNauticalMiles )
+				throws NmsApiException
+		{
+			return """
+                 {
+                   "data": {
+                     "geojson": []
+                   }
+                 }
+                 """;
 		}
 	}
 }
