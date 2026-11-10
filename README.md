@@ -65,7 +65,7 @@ mvn compile exec:java \
     -Dexec.args="--departure departureAirport --destination destinationAirport"
 ```
 
-The end to end runner takes a departure and destination airport, fetches notams from the FAA API, and prints them in a prioritized list. 
+The end to end runner takes a departure and destination airport, fetches notams from the FAA API, and prints prioritized notams one per line. 
 
 Set your FAA API credentials in the terminal session first(they are not persistent between sessions)
 

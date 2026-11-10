@@ -1,4 +1,5 @@
 package edu.cs4273.notams.output;
+
 import java.util.List;
 import java.util.function.ToIntFunction;
 
@@ -41,35 +42,32 @@ public class NotamOutput
 			return;
 		}
 
-		LOGGER.info( "Prioritized NOTAMs:\n" );
-
-		int index = 1;
 		for( Notam n : notams ) {
-			for( String line : formatLines( index, n ) ) {
-				LOGGER.info( "{}", line );
-			}
-			LOGGER.info( "" );
-
-			index++;
+			LOGGER.info( "{}", formatLine( n ) );
 		}
 	}
 
-	List<String> formatLines( final int index, final Notam n )
+	// Formats a single notam as a one line string
+	// Also, it optionally applies color based on priority
+	String formatLine( final Notam n )
 	{
-		final List<String> lines = List.of(
-				index + ". " + n.getNotamId(),
-				"Description: " + n.getNotamText(),
-				"Location: " + n.getLocation(),
-				"Start: " + n.getStartTime(),
-				"End: " + n.getEndTime() );
+		final String location = n.getLocation().trim();
+		final String text = n.getNotamText().trim().replaceAll( "\\s+", " " );
+		final String startTime = n.getStartTime().trim();
+		final String endTime = n.getEndTime().trim();
+		final String validity = startTime.isEmpty() && endTime.isEmpty()
+				? ""
+				: startTime + "-" + endTime;
+		final String line = String.join( " ",
+				"!" + location, n.getNotamId().trim(), location, text,
+				validity ).trim();
 
 		if( !useColor ) {
-			return lines;
+			return line;
 		}
 
+		// Priority determines the color applied to the line
 		final int priority = priorityLookup.applyAsInt( n );
-		return lines.stream()
-				.map( line -> NotamColor.apply( line, priority ) )
-				.toList();
+		return NotamColor.apply( line, priority );
 	}
 }
