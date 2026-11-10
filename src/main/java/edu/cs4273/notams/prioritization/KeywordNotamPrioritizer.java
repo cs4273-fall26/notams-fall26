@@ -36,7 +36,7 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 		return notams;
 	}
 
-	private int getPriority( final Notam notam )
+	public int getPriority( final Notam notam )
 	{
 		if( notam == null || notam.getNotamText() == null ) {
 			return 2;
