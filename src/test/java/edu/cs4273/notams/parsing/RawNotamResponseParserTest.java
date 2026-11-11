@@ -163,4 +163,109 @@ public class RawNotamResponseParserTest
 		assertThrows( com.fasterxml.jackson.core.JsonProcessingException.class,
 				() -> parser.parse( response ) );
 	}
+
+
+	@Test
+	public void testParseAreaPreservesLocations() throws Exception
+	{
+		final String json = """
+                {
+                  "data": {
+                    "geojson": [
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "1",
+                              "text": "RWY CLSD",
+                              "icaoLocation": "KICT",
+                              "location": "ICT"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "2",
+                              "text": "OBST TOWER LGT U/S",
+                              "location": "72K"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "properties": {
+                          "coreNOTAMData": {
+                            "notam": {
+                              "id": "3",
+                              "text": "AIRSPACE NOTICE"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """;
+
+		final List<Notam> result = parser.parseArea( json );
+
+		assertEquals( 3, result.size() );
+		assertEquals( "KICT", result.get( 0 ).getLocation() );
+		assertEquals( "72K", result.get( 1 ).getLocation() );
+		assertEquals( "", result.get( 2 ).getLocation() );
+		assertEquals( "3", result.get( 2 ).getNotamId() );
+		assertEquals( "AIRSPACE NOTICE",
+				result.get( 2 ).getNotamText() );
+	}
+
+	@Test
+	public void testParseAreaRejectsNull()
+	{
+		assertThrows( IllegalArgumentException.class,
+				() -> parser.parseArea( null ) );
+	}
+
+	@Test
+	public void testParseAreaRejectsMissingGeojson()
+	{
+		assertThrows( IllegalArgumentException.class,
+				() -> parser.parseArea( "{}" ) );
+	}
+
+	@Test
+	public void testParseAreaRejectsInvalidJson()
+	{
+		assertThrows(
+				com.fasterxml.jackson.core.JsonProcessingException.class,
+				() -> parser.parseArea( "{ invalid json" ) );
+	}
+	@Test
+	public void parseAreaReadsCancellationType() throws Exception {
+		String json = """
+        {
+          "data": {
+            "geojson": [{
+              "properties": {
+                "coreNOTAMData": {
+                  "notam": {
+                    "number": "A1581/26",
+                    "type": "C",
+                    "text": "A1581/26 NOTAMC A1562/26"
+                  }
+                }
+              }
+            }]
+          }
+        }
+        """;
+
+		RawNotamResponseParser parser = new RawNotamResponseParser();
+		var notams = parser.parseArea(json);
+
+		assertEquals(1, notams.size());
+		assertEquals("C", notams.get(0).getType());
+	}
 }

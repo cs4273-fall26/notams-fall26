@@ -1,4 +1,6 @@
 package edu.cs4273.notams.output;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToIntFunction;
 
@@ -27,7 +29,7 @@ public class NotamOutput
 	}
 
 	NotamOutput( final ToIntFunction<Notam> priorityLookup,
-			final boolean useColor )
+				 final boolean useColor )
 	{
 		this.priorityLookup = priorityLookup;
 		this.useColor = useColor;
@@ -35,7 +37,6 @@ public class NotamOutput
 
 	public void render( List<Notam> notams )
 	{
-		// Checks if the NOTAMs are empty
 		if( notams == null || notams.isEmpty() ) {
 			LOGGER.info( "There are no NOTAMs available." );
 			return;
@@ -49,11 +50,11 @@ public class NotamOutput
 				LOGGER.info( "{}", line );
 			}
 			LOGGER.info( "" );
-
 			index++;
 		}
 	}
 
+	// Format one NOTAM for console output.
 	List<String> formatLines( final int index, final Notam n )
 	{
 		final List<String> lines = List.of(
@@ -71,5 +72,32 @@ public class NotamOutput
 		return lines.stream()
 				.map( line -> NotamColor.apply( line, priority ) )
 				.toList();
+	}
+
+	// Format the full list for the plain-text report.
+	public List<String> formatLines( List<Notam> notams )
+	{
+		if( notams == null || notams.isEmpty() ) {
+			return List.of( "There are no NOTAMs available." );
+		}
+
+		final List<String> lines = new ArrayList<>();
+		lines.add( "Prioritized NOTAMs:" );
+		lines.add( "" );
+
+		int index = 1;
+		for( Notam n : notams ) {
+			lines.add( index + ". " + n.getNotamId() );
+			lines.add( "Number: " + n.getNumber() );
+			lines.add( "Classification: " + n.getClassification() );
+			lines.add( "Description: " + n.getNotamText() );
+			lines.add( "Location: " + n.getLocation() );
+			lines.add( "Start: " + n.getStartTime() );
+			lines.add( "End: " + n.getEndTime() );
+			lines.add( "" );
+			index++;
+		}
+
+		return lines;
 	}
 }
