@@ -72,11 +72,12 @@ class EndToEndRunnerTest
 		assertEquals( "KOKC", apiClient.startLocation.locationValue() );
 		assertEquals( "KDEN", apiClient.endLocation.locationValue() );
 		assertEquals( 2, result.size() );
-		assertEquals( "SHORT", result.get( 0 ).getNotamId() );
-		assertEquals( "KDEN", result.get( 0 ).getLocation() );
-		assertEquals( "LONG", result.get( 1 ).getNotamId() );
+		assertEquals( "LONG", result.get( 0 ).getNotamId() );
+		assertEquals( "KOKC", result.get( 0 ).getLocation() );
 		assertEquals( "2026-10-19T10:00:00Z",
-				result.get( 1 ).getStartTime() );
+				result.get( 0 ).getStartTime() );
+		assertEquals( "SHORT", result.get( 1 ).getNotamId() );
+		assertEquals( "KDEN", result.get( 1 ).getLocation() );
 	}
 
 	private static final class RecordingApiClient implements NmsApiAccess
