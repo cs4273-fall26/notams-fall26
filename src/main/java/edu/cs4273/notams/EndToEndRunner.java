@@ -1,5 +1,8 @@
 package edu.cs4273.notams;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,15 +49,27 @@ public class EndToEndRunner
 		final NotamOutput output = new NotamOutput(
 				new KeywordNotamPrioritizer()::getPriority );
 		output.render( prioritizedList );
+
+		final NotamOutput fileOutput = new NotamOutput(
+				new KeywordNotamPrioritizer()::getPriority, false );
+		try {
+			Files.writeString( Path.of( departure.returnLocationValue() + "-"
+							+ destination.returnLocationValue() + ".txt" ),
+					fileOutput.renderToString( prioritizedList ) );
+		}
+		catch( final IOException e ) {
+			LOGGER.error( "Unable to write output file", e );
+		}
 	}
 
 	static List<Notam> process( final LocationIdentifier departure,
-			final LocationIdentifier destination, final NmsApiAccess apiClient )
+								final LocationIdentifier destination,
+								final NmsApiAccess apiClient )
 	{
 		List<RawNotamResponse> rawResponseList;
 		try {
-			rawResponseList = apiClient.fetchNotamsForRoute(
-					departure, destination );
+			rawResponseList = apiClient.fetchNotamsForRoute( departure,
+					destination );
 		}
 		catch( final NmsApiException e ) {
 			throw new RuntimeException( e );
@@ -67,8 +82,7 @@ public class EndToEndRunner
 				notams.addAll( parser.parse( rawResponse ) );
 			}
 			catch( final JsonProcessingException e ) {
-				throw new RuntimeException(
-						"Unable to parse FAA response", e );
+				throw new RuntimeException( "Unable to parse FAA response", e );
 			}
 		}
 

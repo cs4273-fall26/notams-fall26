@@ -23,12 +23,12 @@ public class NotamOutput
 
 	public NotamOutput( final ToIntFunction<Notam> priorityLookup )
 	{
-		this( priorityLookup, NotamColor.isEnabled(
-				System.getenv( "NO_COLOR" ), System.console() != null ) );
+		this( priorityLookup, NotamColor.isEnabled( System.getenv( "NO_COLOR" ),
+				System.console() != null ) );
 	}
 
-	NotamOutput( final ToIntFunction<Notam> priorityLookup,
-			final boolean useColor )
+	public NotamOutput( final ToIntFunction<Notam> priorityLookup,
+						final boolean useColor )
 	{
 		this.priorityLookup = priorityLookup;
 		this.useColor = useColor;
@@ -69,5 +69,20 @@ public class NotamOutput
 		// Priority determines the color applied to the line
 		final int priority = priorityLookup.applyAsInt( n );
 		return NotamColor.apply( line, priority );
+	}
+
+
+	public String renderToString( final List<Notam> notams )
+	{
+		final StringBuilder sb = new StringBuilder();
+		int index = 1;
+		for( Notam n : notams ) {
+			for( String line : List.of( formatLine( n ) ) ) {
+				sb.append( line ).append( System.lineSeparator() );
+			}
+			sb.append( System.lineSeparator() );
+			index++;
+		}
+		return sb.toString();
 	}
 }
