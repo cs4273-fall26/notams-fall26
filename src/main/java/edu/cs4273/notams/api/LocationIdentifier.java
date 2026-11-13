@@ -32,4 +32,9 @@ public record LocationIdentifier(String locationValue)
 
 		this.locationValue = normalized;
 	}
+
+	public String returnLocationValue()
+	{
+		return locationValue;
+	}
 }

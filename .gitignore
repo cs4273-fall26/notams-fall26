@@ -865,3 +865,6 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/vim,emacs,linux,macos,python,windows,visualstudio,visualstudiocode,intellij+all,eclipse
+
+# Program output
+*.txt
