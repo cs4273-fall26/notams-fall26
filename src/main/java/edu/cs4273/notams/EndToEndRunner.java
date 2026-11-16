@@ -59,9 +59,15 @@ public class EndToEndRunner
 				.fetch( departure, destination );
 
 		final List<Notam> uniqueNotams = NotamFilter.removeRepeatedIds( notams );
+		final int beforeCancellations = uniqueNotams.size();
 		NotamFilter.removeCancellations( uniqueNotams );
+		LOGGER.debug( "Removed {} cancellation NOTAMs",
+				beforeCancellations - uniqueNotams.size() );
 
 		final NotamPrioritizer prioritizer = new KeywordNotamPrioritizer();
-		return prioritizer.prioritize( uniqueNotams );
+		final List<Notam> prioritizedList = prioritizer.prioritize( uniqueNotams );
+		LOGGER.debug( "Prioritized {} NOTAMs", prioritizedList.size() );
+
+		return prioritizedList;
 	}
 }

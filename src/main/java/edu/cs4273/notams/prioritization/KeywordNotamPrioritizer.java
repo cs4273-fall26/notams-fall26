@@ -1,16 +1,22 @@
 package edu.cs4273.notams.prioritization;
 
+import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Logger;
+import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.cs4273.notams.objects.Notam;
 
 public class KeywordNotamPrioritizer implements NotamPrioritizer
 {
-	private static final Logger LOGGER =
-			Logger.getLogger( KeywordNotamPrioritizer.class.getName() );
+	private static final Logger LOGGER = LoggerFactory.getLogger(
+			KeywordNotamPrioritizer.class );
+	private static final int NO_KEYWORD = -1;
+
 	@Override
 	public List<Notam> prioritize( final List<Notam> notams )
 	{
@@ -18,25 +24,29 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 			return notams;
 		}
 
-		notams.sort( ( first, second ) -> {
-			final int firstPriority = getPriority( first );
-			final int secondPriority = getPriority( second );
-
-			if( firstPriority < secondPriority ) {
-				return -1;
+		final Map<Notam, Integer> priorities = new IdentityHashMap<>();
+		for( final Notam notam : notams ) {
+			int priority = keywordPriority( notam );
+			if( priority == NO_KEYWORD ) {
+				LOGGER.debug( "No priority keyword in NOTAM {}: {}",
+						notam.notamId(), notam.notamText() );
+				priority = 2;
 			}
+			priorities.put( notam, priority );
+		}
 
-			if( firstPriority > secondPriority ) {
-				return 1;
-			}
-
-			return 0;
-		} );
+		notams.sort( Comparator.comparingInt( priorities::get ) );
 
 		return notams;
 	}
 
 	public int getPriority( final Notam notam )
+	{
+		final int priority = keywordPriority( notam );
+		return priority == NO_KEYWORD ? 2 : priority;
+	}
+
+	private int keywordPriority( final Notam notam )
 	{
 		if( notam == null || notam.notamText() == null ) {
 			return 2;
@@ -82,8 +92,7 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 			}
 		}
 
-		// Keep unknown notices in the middle for review.
-		LOGGER.fine( () -> "Unknown NOTAM: " + notam.notamText() );
-		return 2;
+		// Unknown notices stay in the middle for review.
+		return NO_KEYWORD;
 	}
 }
