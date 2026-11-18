@@ -68,7 +68,7 @@ public class NotamOutputTest
 				new NotamOutput( prioritizer::getPriority, false );
 
 		assertEquals(
-				"!KOKC 1 KOKC RWY 18 CLSD 2026-11-10T12:00:00Z-2026-11-10T18:00:00Z",
+				"!KOKC KOKC RWY 18 CLSD 2026-11-10T12:00:00Z-2026-11-10T18:00:00Z",
 				output.formatLine( notam( "RWY 18 CLSD" ) ) );
 	}
 
@@ -79,7 +79,7 @@ public class NotamOutputTest
 				new NotamOutput().formatLine( notam( "RWY 18 CLSD" ) );
 
 		assertEquals(
-				"!KOKC 1 KOKC RWY 18 CLSD 2026-11-10T12:00:00Z-2026-11-10T18:00:00Z",
+				"!KOKC KOKC RWY 18 CLSD 2026-11-10T12:00:00Z-2026-11-10T18:00:00Z",
 				line );
 	}
 
@@ -90,7 +90,7 @@ public class NotamOutputTest
 				"OUN", "2611101200", "2611101800" );
 
 		assertEquals(
-				"!OUN 11/001 OUN RWY 18/36 CLSD 2611101200-2611101800",
+				"!OUN OUN RWY 18/36 CLSD 2611101200-2611101800",
 				new NotamOutput( prioritizer::getPriority, false )
 						.formatLine( timedNotam ) );
 	}
@@ -101,7 +101,7 @@ public class NotamOutputTest
 		final Notam noTimeNotam = new Notam( "11/001",
 				"RWY 18 CLSD\nDUE TO WORK", "OUN", "", "" );
 
-		assertEquals( "!OUN 11/001 OUN RWY 18 CLSD DUE TO WORK",
+		assertEquals( "!OUN OUN RWY 18 CLSD DUE TO WORK",
 				new NotamOutput( prioritizer::getPriority, false )
 						.formatLine( noTimeNotam ) );
 	}

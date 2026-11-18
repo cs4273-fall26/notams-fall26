@@ -19,11 +19,11 @@ class NotamTest
 	@Test
 	void gettersReturnConstructorValues()
 	{
-		assertEquals( "A1234/26", notam.getNotamId() );
-		assertEquals( "RWY 17L/35R CLSD", notam.getNotamText() );
-		assertEquals( "KOKC", notam.getLocation() );
-		assertEquals( "2026-10-03T12:00Z", notam.getStartTime() );
-		assertEquals( "2026-10-04T12:00Z", notam.getEndTime() );
+		assertEquals( "A1234/26", notam.notamId() );
+		assertEquals( "RWY 17L/35R CLSD", notam.notamText() );
+		assertEquals( "KOKC", notam.location() );
+		assertEquals( "2026-10-03T12:00Z", notam.startTime() );
+		assertEquals( "2026-10-04T12:00Z", notam.endTime() );
 	}
 
 }

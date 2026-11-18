@@ -38,12 +38,12 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 
 	public int getPriority( final Notam notam )
 	{
-		if( notam == null || notam.getNotamText() == null ) {
+		if( notam == null || notam.notamText() == null ) {
 			return 2;
 		}
 
 		final String text =
-				notam.getNotamText().toUpperCase( Locale.ROOT );
+				notam.notamText().toUpperCase( Locale.ROOT );
 
 		final String[] words = text.split( "\\W+" );
 
@@ -83,7 +83,7 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 		}
 
 		// Keep unknown notices in the middle for review.
-		LOGGER.fine( () -> "Unknown NOTAM: " + notam.getNotamText() );
+		LOGGER.fine( () -> "Unknown NOTAM: " + notam.notamText() );
 		return 2;
 	}
 }

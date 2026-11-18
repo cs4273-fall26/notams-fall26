@@ -51,16 +51,15 @@ public class NotamOutput
 	// Also, it optionally applies color based on priority
 	String formatLine( final Notam n )
 	{
-		final String location = n.getLocation().trim();
-		final String text = n.getNotamText().trim().replaceAll( "\\s+", " " );
-		final String startTime = n.getStartTime().trim();
-		final String endTime = n.getEndTime().trim();
+		final String location = n.location().trim();
+		final String text = n.notamText().trim().replaceAll( "\\s+", " " );
+		final String startTime = n.startTime().trim();
+		final String endTime = n.endTime().trim();
 		final String validity = startTime.isEmpty() && endTime.isEmpty()
 				? ""
 				: startTime + "-" + endTime;
 		final String line = String.join( " ",
-				"!" + location, n.getNotamId().trim(), location, text,
-				validity ).trim();
+				"!" + location, location, text, validity ).trim();
 
 		if( !useColor ) {
 			return line;
@@ -75,13 +74,9 @@ public class NotamOutput
 	public String renderToString( final List<Notam> notams )
 	{
 		final StringBuilder sb = new StringBuilder();
-		int index = 1;
 		for( Notam n : notams ) {
-			for( String line : List.of( formatLine( n ) ) ) {
-				sb.append( line ).append( System.lineSeparator() );
-			}
+			sb.append( formatLine( n ) ).append( System.lineSeparator() );
 			sb.append( System.lineSeparator() );
-			index++;
 		}
 		return sb.toString();
 	}

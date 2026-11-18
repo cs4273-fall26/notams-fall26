@@ -71,11 +71,11 @@ public class ApiLayerDemo
 
 						LOGGER.info( "" );
 						LOGGER.info( "---------- NOTAM {} ----------", i + 1 );
-						LOGGER.info( "ID: {}", notam.getNotamId() );
-						LOGGER.info( "Text: {}", notam.getNotamText() );
-						LOGGER.info( "Location: {}", notam.getLocation() );
-						LOGGER.info( "Start: {}", notam.getStartTime() );
-						LOGGER.info( "End: {}", notam.getEndTime() );
+						LOGGER.info( "ID: {}", notam.notamId() );
+						LOGGER.info( "Text: {}", notam.notamText() );
+						LOGGER.info( "Location: {}", notam.location() );
+						LOGGER.info( "Start: {}", notam.startTime() );
+						LOGGER.info( "End: {}", notam.endTime() );
 					}
 
 					LOGGER.info( "" );
