@@ -383,6 +383,111 @@ class AbstractNmsApiClientTest
 			executor.shutdownNow();
 		}
 	}
+	@Test
+	void areaRequestUsesCoordinatesAndPreservesRawJson() throws Exception
+	{
+		final String json = client.fetchNotamsByArea(
+				37.65, -97.43, 10 );
+
+		assertEquals(
+				List.of( "latitude=37.65&longitude=-97.43&radius=10.0" ),
+				queries );
+		assertEquals(
+				" { \"location\": \"latitude=37.65&longitude=-97.43&radius=10.0\" }\n",
+				json );
+		assertEquals( "Bearer test-token", authorizations.get( 0 ) );
+		assertEquals( "GEOJSON", responseFormat );
+		assertEquals( "application/json", accept );
+	}
+
+	@Test
+	void areaAndLocationRequestsReuseToken() throws Exception
+	{
+		fetch();
+		client.fetchNotamsByArea( 37.65, -97.43, 10 );
+
+		assertEquals( 1, tokenRequests.get() );
+		assertEquals( 2, notamRequests.get() );
+	}
+
+	@Test
+	void areaRequestRetriesUnauthorizedOnce() throws Exception
+	{
+		rejectFirstNotam = true;
+
+		client.fetchNotamsByArea( 37.65, -97.43, 10 );
+
+		assertEquals( 2, tokenRequests.get() );
+		assertEquals( 2, notamRequests.get() );
+		assertEquals( queries.get( 0 ), queries.get( 1 ) );
+	}
+
+	@Test
+	void areaRequestStopsAfterRepeatedUnauthorized()
+	{
+		notamStatus = 401;
+
+		final NmsHttpException exception = assertThrows(
+				NmsHttpException.class,
+				() -> client.fetchNotamsByArea( 37.65, -97.43, 10 ) );
+
+		assertEquals( 401, exception.getStatusCode() );
+		assertEquals( 2, notamRequests.get() );
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = { 400, 403, 404, 429, 500, 503 })
+	void areaRequestPreservesHttpErrors( final int status )
+	{
+		notamStatus = status;
+
+		final NmsHttpException exception = assertThrows(
+				NmsHttpException.class,
+				() -> client.fetchNotamsByArea( 37.65, -97.43, 10 ) );
+
+		assertEquals( status, exception.getStatusCode() );
+		assertEquals( 1, notamRequests.get() );
+	}
+
+	@Test
+	void areaRequestRejectsInvalidValuesBeforeSending()
+	{
+		for( final double latitude : new double[] {
+				-91, 91, Double.NaN,
+				Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY } ) {
+			assertThrows( IllegalArgumentException.class,
+					() -> client.fetchNotamsByArea( latitude, -97.43, 10 ) );
+		}
+
+		for( final double longitude : new double[] {
+				-181, 181, Double.NaN,
+				Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY } ) {
+			assertThrows( IllegalArgumentException.class,
+					() -> client.fetchNotamsByArea( 37.65, longitude, 10 ) );
+		}
+
+		for( final double radius : new double[] {
+				-1, 101, Double.NaN,
+				Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY } ) {
+			assertThrows( IllegalArgumentException.class,
+					() -> client.fetchNotamsByArea( 37.65, -97.43, radius ) );
+		}
+
+		assertEquals( 0, tokenRequests.get() );
+		assertEquals( 0, notamRequests.get() );
+	}
+
+	@Test
+	void areaRequestAcceptsBoundaryValues() throws Exception
+	{
+		client.fetchNotamsByArea( -90, -180, 0 );
+		client.fetchNotamsByArea( 90, 180, 100 );
+
+		assertEquals( List.of(
+						"latitude=-90.0&longitude=-180.0&radius=0.0",
+						"latitude=90.0&longitude=180.0&radius=100.0" ),
+				queries );
+	}
 
 	private static final class MutableClock extends Clock
 	{

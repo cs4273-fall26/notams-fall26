@@ -164,11 +164,11 @@ public class KeywordNotamPrioritizerTest
 		final List<Notam> result = prioritizer.prioritize( notams );
 
 		assertEquals( 5, result.size() );
-		assertEquals( "3", result.get( 0 ).getNotamId() );
-		assertEquals( "2", result.get( 1 ).getNotamId() );
-		assertEquals( "4", result.get( 2 ).getNotamId() );
-		assertEquals( "1", result.get( 3 ).getNotamId() );
-		assertEquals( "5", result.get( 4 ).getNotamId() );
+		assertEquals( "3", result.get( 0 ).notamId() );
+		assertEquals( "2", result.get( 1 ).notamId() );
+		assertEquals( "4", result.get( 2 ).notamId() );
+		assertEquals( "1", result.get( 3 ).notamId() );
+		assertEquals( "5", result.get( 4 ).notamId() );
 	}
 
 

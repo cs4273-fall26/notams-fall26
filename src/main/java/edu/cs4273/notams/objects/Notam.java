@@ -1,38 +1,24 @@
 package edu.cs4273.notams.objects;
 
-public class Notam{
-    private String notamId;
-    private String notamText;
-    private String location;
-    private String startTime;
-    private String endTime;
-    
-    public Notam(String notamId, String notamText, String location, String startTime, String endTime) {
-        this.notamId = notamId;
-        this.notamText = notamText;
-        this.location = location;
-        this.startTime = startTime;
-        this.endTime = endTime;
-    }
+// Number, classification and type are empty when the FAA response
+// does not include them.
+public record Notam(String notamId, String notamText, String location,
+					String startTime, String endTime, String number,
+					String classification, String type) {
 
-    public String getNotamId() {
-        return notamId;
-    }
+	public Notam(String notamId, String notamText, String location,
+				 String startTime, String endTime) {
+		this(notamId, notamText, location, startTime, endTime, "", "", "");
+	}
 
-    public String getNotamText() {
-        return notamText;
-    }
+	public Notam(String notamId, String notamText, String location,
+				 String startTime, String endTime, String number,
+				 String classification) {
+		this(notamId, notamText, location, startTime, endTime, number,
+				classification, "");
+	}
 
-    public String getLocation() {
-        return location;
-    }
-    
-    public String getStartTime() {
-        return startTime;
-    }
-
-    public String getEndTime() {
-        return endTime;
-    }
+	public boolean isCancellation() {
+		return "C".equals(type);
+	}
 }
-
