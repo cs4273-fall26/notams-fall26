@@ -1,5 +1,6 @@
 package edu.cs4273.notams.api;
 
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
@@ -14,20 +15,23 @@ public record LocationIdentifier(String locationValue)
 	{
 		if( StringUtils.isBlank( locationValue ) ) {
 			throw new IllegalArgumentException(
-					"The location can't be null or blank." );
+					"The airport code can't be null or blank." );
 		}
 
 		final String normalized = StringUtils.trimToEmpty( locationValue )
 				.toUpperCase( Locale.US );
 
-		if( !normalized.matches( "[A-Z0-9]{3,5}" ) ) {
-			throw new IllegalArgumentException(
-					"Location must be a 3-5 character FAA or ICAO identifier, such as KOKC." );
+		if( !normalized.matches( "[A-Z0-9]{3,4}" ) ) {
+			throw invalidCodeMessage(
+					"The airport code is invalid. Enter a 3-4 character airport "
+							+ "identifier.",
+					normalized );
 		}
 
 		if( !ContinentalUsAirports.contains( normalized ) ) {
-			throw new IllegalArgumentException( "Location " + normalized
-					+ " is not a known airport in the continental US." );
+			throw invalidCodeMessage( "Airport code " + normalized
+					+ " was not found in the supported airport list for the "
+					+ "contiguous US.", normalized );
 		}
 
 		this.locationValue = normalized;
@@ -36,5 +40,17 @@ public record LocationIdentifier(String locationValue)
 	public String returnLocationValue()
 	{
 		return locationValue;
+	}
+
+	private static IllegalArgumentException invalidCodeMessage(
+			final String message, final String normalized )
+	{
+		final List<String> suggestions =
+				ContinentalUsAirports.suggestions( normalized );
+		if( suggestions.isEmpty() ) {
+			return new IllegalArgumentException( message );
+		}
+		return new IllegalArgumentException( message + " Possible matches: "
+				+ String.join( ", ", suggestions ) + "." );
 	}
 }
