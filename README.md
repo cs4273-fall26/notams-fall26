@@ -69,6 +69,12 @@ The end to end runner takes a departure and destination airport, fetches notams 
 
 Set your FAA API credentials in the terminal session first(they are not persistent between sessions)
 
+To see debug logs (API calls, NOTAM counts, NOTAMs that failed to parse or are missing fields), set `LOG_LEVEL` before running:
+
+```bash
+export LOG_LEVEL=DEBUG
+```
+
 ### **Notam Prioritization Strategy**
 `KeywordNotamPrioritizer.java` will sort the notams into three priority levels
 

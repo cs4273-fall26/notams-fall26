@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -30,6 +32,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public abstract class AbstractNmsApiClient
 {
+	private static final Logger LOGGER = LoggerFactory.getLogger(
+			AbstractNmsApiClient.class );
 	private static final int CONNECTION_TIMEOUT_IN_SECONDS = 10;
 	private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
 	private static final int TOKEN_EXPIRATION_MARGIN_IN_SECONDS = 60;
@@ -173,6 +177,8 @@ public abstract class AbstractNmsApiClient
 		HttpResponse<String> response = sendNotamRequest( location );
 		// A 401 can indicate that the cached token is no longer valid.
 		if( response.statusCode() == 401 ) {
+			LOGGER.debug( "NOTAM request for {} got HTTP 401, retrying with a new token",
+					location.locationValue() );
 			clearCachedToken();
 			response = sendNotamRequest( location );
 		}
@@ -202,8 +208,11 @@ public abstract class AbstractNmsApiClient
 	{ // Retrieves the cached access token or requests a new one if expired
 		if( cachedAccessToken != null && clock.instant()
 				.isBefore( tokenExpirationTime ) ) {
+			LOGGER.debug( "Using cached access token, expires {}",
+					tokenExpirationTime );
 			return cachedAccessToken;
 		}
+		LOGGER.debug( "Requesting new access token" );
 		final String credentials = clientId + ":" + clientSecret;
 		final String basicAuthorization = Base64.getEncoder().encodeToString(
 				credentials.getBytes( StandardCharsets.UTF_8 ) );
@@ -286,9 +295,18 @@ public abstract class AbstractNmsApiClient
 											  final String action )
 			throws NmsApiException
 	{
+		LOGGER.debug( "{}: {} {}", action, request.method(), request.uri() );
+		final long startNanos = System.nanoTime();
 		try {
-			return httpClient.send( request,
+			final HttpResponse<String> response = httpClient.send( request,
 					HttpResponse.BodyHandlers.ofString() );
+			if( LOGGER.isDebugEnabled() ) {
+				LOGGER.debug( "{}: HTTP {} in {} ms, {} chars", action,
+						response.statusCode(),
+						( System.nanoTime() - startNanos ) / 1_000_000,
+						response.body() == null ? 0 : response.body().length() );
+			}
+			return response;
 		}
 		catch( final HttpTimeoutException exception ) {
 			throw new NmsApiException( action + " timed out (request limit "

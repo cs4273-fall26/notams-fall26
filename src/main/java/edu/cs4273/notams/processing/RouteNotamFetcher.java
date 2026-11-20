@@ -52,6 +52,7 @@ public class RouteNotamFetcher
 			// Fetch notices for the departure and destination airports.
 			final List<RawNotamResponse> responses =
 					apiClient.fetchNotamsForRoute( departure, destination );
+			LOGGER.debug( "Fetched {} airport API responses", responses.size() );
 
 			for( final RawNotamResponse response : responses ) {
 				notams.addAll( parser.parse( response ) );
@@ -67,6 +68,7 @@ public class RouteNotamFetcher
 						point.latitude(), point.longitude(), SEARCH_RADIUS_NM );
 				notams.addAll( parser.parseArea( areaJson ) );
 			}
+			LOGGER.debug( "Parsed {} NOTAMs in total", notams.size() );
 		}
 		catch( final NmsApiException e ) {
 			throw new RuntimeException(
