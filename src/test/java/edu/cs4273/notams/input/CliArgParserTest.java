@@ -14,6 +14,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.junit.jupiter.api.Test;
+import org.apache.commons.lang3.tuple.Pair;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -180,6 +181,16 @@ public class CliArgParserTest
 		final String[] params = { "-a", "dfw", "-d", "okc" };
 
 		assertDoesNotThrow( () -> CliArgParser.main( params ) );
+	}
+
+	@Test
+	public void testAirportCodesArePassedThroughWithoutStripping()
+	{
+		final Pair<String, String> parsed = CliArgParser.parse( new String[] {
+				"--departure", "KOKC", "--destination", "KDEN"
+		} );
+
+		assertEquals( Pair.of( "KOKC", "KDEN" ), parsed );
 	}
 
 	@Test

@@ -21,7 +21,9 @@ class LocationIdentifierTest
 
 	@ParameterizedTest
 	@NullAndEmptySource
-	@ValueSource(strings = { " ", "AB", "ABCDEF", "K!KC", "K OKC", "OKC?x=1" })
+	@ValueSource(strings = {
+			" ", "AB", "ABCDE", "ABCDEF", "K!KC", "K OKC", "OKC?x=1"
+	})
 	void invalidInputIsNotAnApiFailure( final String input )
 	{
 		assertThrows( IllegalArgumentException.class,
@@ -44,6 +46,29 @@ class LocationIdentifierTest
 		final IllegalArgumentException thrown = assertThrows(
 				IllegalArgumentException.class,
 				() -> new LocationIdentifier( input ) );
-		assertTrue( thrown.getMessage().contains( "continental US" ) );
+		assertTrue( thrown.getMessage().contains( "contiguous US." ) );
+	}
+
+	@Test
+	void unknownAirportCodeIncludesNearbySuggestions()
+	{
+		final IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> new LocationIdentifier( "KOKX" ) );
+
+		assertTrue( thrown.getMessage().contains( "not found" ) );
+		assertTrue( thrown.getMessage().contains( "KOKC" ) );
+	}
+
+	@Test
+	void invalidFormatExplainsExpectedAirportCodeFormat()
+	{
+		final IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> new LocationIdentifier( "AB" ) );
+
+		assertTrue( thrown.getMessage().contains( "airport code is invalid" ) );
+		assertTrue( thrown.getMessage().contains(
+				"3-4 character airport identifier" ) );
 	}
 }

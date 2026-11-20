@@ -118,14 +118,6 @@ public class CliArgParser
 		String departureCode = cmdLine.getOptionValue( departureOption );
 		String destinationCode = cmdLine.getOptionValue( destinationOption );
 
-		// Strip leading character if code length is greater than 3 to remove location identifer from ICAO codes
-		if( departureCode.length() > 3 ) {
-			departureCode = departureCode.substring( 1 );
-		}
-		if( destinationCode.length() > 3 ) {
-			destinationCode = destinationCode.substring( 1 );
-		}
-
 		LOGGER.info( "Departure code: {}", departureCode );
 		LOGGER.info( "Destination code: {}", destinationCode );
 		return Pair.of( departureCode, destinationCode );
