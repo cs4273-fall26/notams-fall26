@@ -9,7 +9,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class CliArgParser
 			System.exit( exitCode );
 		}
 	}
-	// Parses the departure time from the command line arguments
+	// Parses the departure time from the command line arguments.
 	public static String parseDepartureTime( final String[] args )
 	{
 		if( args == null ) {
@@ -55,11 +55,10 @@ public class CliArgParser
 								"Missing value for --departure-time" ) );
 			}
 		}
-		// If the departure time argument is not provided, return null
 		return null;
 	}
 
-	public static Pair<String, String> parse( String[] args )
+	public static Triple<String, String, String> parse( String[] args )
 	{
 		// Options could be marked as "required" but this interferes with the
 		// ability to provide the help option (providing only `--help` means
@@ -92,6 +91,12 @@ public class CliArgParser
 				.desc( "Departure time in local HH:mm format" )
 				.get();
 		options.addOption( departureTimeOption );
+		final Option flightTypeOption = Option.builder( "f" )
+				.longOpt( "flight-type" )
+				.hasArg()
+				.desc( "Flight type (ifr, vfr)" )
+				.get();
+		options.addOption( flightTypeOption );
 
 		final Option helpOption = Option.builder( "h" )
 				.longOpt( "help" )
@@ -147,6 +152,8 @@ public class CliArgParser
 
 		LOGGER.info( "Departure code: {}", departureCode );
 		LOGGER.info( "Destination code: {}", destinationCode );
-		return Pair.of( departureCode, destinationCode );
+		String flightType = cmdLine.getOptionValue( flightTypeOption );
+		LOGGER.info( "Flight type: {}", flightType );
+		return Triple.of( departureCode, destinationCode, flightType );
 	}
 }

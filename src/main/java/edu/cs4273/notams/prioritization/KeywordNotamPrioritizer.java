@@ -7,7 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,27 +15,67 @@ import edu.cs4273.notams.objects.Notam;
 
 public class KeywordNotamPrioritizer implements NotamPrioritizer
 {
+	public enum FlightType
+	{
+		IFR,
+		VFR;
+
+		public static FlightType fromArgument( final String value )
+		{
+			if( value == null || value.isBlank() ) {
+				return IFR;
+			}
+			try {
+				return valueOf( value.trim().toUpperCase( Locale.ROOT ) );
+			}
+			catch( final IllegalArgumentException e ) {
+				throw new IllegalArgumentException(
+						"Flight type must be IFR or VFR", e );
+			}
+		}
+	}
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(
 			KeywordNotamPrioritizer.class );
 	private static final int NO_KEYWORD = -1;
 	private static final LocalTime NIGHT_START = LocalTime.of( 18, 0 );
 	private static final LocalTime NIGHT_END = LocalTime.of( 6, 0 );
 
+	private final FlightType flightType;
 	private final LocalTime departureTime;
 
 	public KeywordNotamPrioritizer()
 	{
-		this( (LocalTime) null );
+		this( FlightType.IFR, (LocalTime) null );
+	}
+
+	public KeywordNotamPrioritizer( final FlightType flightType )
+	{
+		this( flightType, (LocalTime) null );
 	}
 
 	public KeywordNotamPrioritizer( final LocalTime departureTime )
 	{
-		this.departureTime = departureTime;
+		this( FlightType.IFR, departureTime );
 	}
 
 	public KeywordNotamPrioritizer( final String departureTime )
 	{
-		this.departureTime = parseDepartureTime( departureTime );
+		this( FlightType.IFR, parseDepartureTime( departureTime ) );
+	}
+
+	public KeywordNotamPrioritizer( final FlightType flightType,
+									final String departureTime )
+	{
+		this( flightType, parseDepartureTime( departureTime ) );
+	}
+
+	public KeywordNotamPrioritizer( final FlightType flightType,
+									final LocalTime departureTime )
+	{
+		this.flightType = Objects.requireNonNull( flightType,
+				"flightType must not be null" );
+		this.departureTime = departureTime;
 	}
 
 	private static LocalTime parseDepartureTime( final String departureTime )
@@ -51,9 +91,11 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 					"Departure time must use HH:mm format", e );
 		}
 	}
+	public int getPriority( final Notam notam )
+	{
+		return getPriority( notam, departureTime );
+	}
 
-
-	// Based on keywords in the notam, a priority will be assigned
 	@Override
 	public List<Notam> prioritize( final List<Notam> notams )
 	{
@@ -72,7 +114,7 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 
 		final Map<Notam, Integer> priorities = new IdentityHashMap<>();
 		for( final Notam notam : notams ) {
-			int priority = keywordPriority( notam );
+			int priority = keywordPriority( notam, flightType );
 			if( priority == NO_KEYWORD ) {
 				LOGGER.debug( "No priority keyword in NOTAM {}: {}",
 						notam.notamId(), notam.notamText() );
@@ -94,15 +136,10 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 		return prioritize( notams, parseDepartureTime( departureTime ) );
 	}
 
-	public int getPriority( final Notam notam )
-	{
-		return getPriority( notam, departureTime );
-	}
-
 	public int getPriority( final Notam notam,
 			final LocalTime departureTime )
 	{
-		final int priority = keywordPriority( notam );
+		final int priority = keywordPriority( notam, flightType );
 		return timeAdjustedPriority(
 				notam,
 				priority == NO_KEYWORD ? 2 : priority,
@@ -152,7 +189,7 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 		return basePriority;
 	}
 
-	private int keywordPriority( final Notam notam )
+	private int keywordPriority( final Notam notam, final FlightType type )
 	{
 		if( notam == null || notam.notamText() == null ) {
 			return 2;
@@ -165,40 +202,61 @@ public class KeywordNotamPrioritizer implements NotamPrioritizer
 
 		// Use the first subject keyword found in the text.
 		for( final String word : words ) {
-			if( word.equals( "AD" )           // Aerodrome / airport
-					|| word.equals( "RWY" )      // Runway
-					|| word.equals( "AIRSPACE" ) // Airspace activity or restrictions
-					|| word.equals( "SECURITY" ) // Security-related notices
-			) {
-				return 1;
-			}
-
-			if( word.equals( "TWY" )       // Taxiway
-					|| word.equals( "APRON" ) // Aircraft parking and loading area
-					|| word.equals( "SVC" )   // Services
-			) {
-				return 3;
-			}
-
-			if( word.equals( "NAV" )       // Navigation aids
-					|| word.equals( "COM" )   // Communications
-					|| word.equals( "IAP" )   // Instrument approach procedure
-					|| word.equals( "ODP" )   // Obstacle departure procedure
-					|| word.equals( "SID" )   // Standard instrument departure
-					|| word.equals( "STAR" )  // Standard terminal arrival
-					|| word.equals( "OBST" )  // Obstruction
-					|| word.equals( "CHART" ) // Aeronautical chart
-					|| word.equals( "DATA" )  // Aeronautical data
-					|| word.equals( "DVA" )   // Diverse vector area
-					|| word.equals( "VFP" )   // Visual flight procedure
-					|| word.equals( "ROUTE" ) // Published route
-					|| word.equals( "SPECIAL" ) // Special instrument flight procedure
-			) {
-				return 2;
+			final int priority = priorityForKeyword( word, type );
+			if( priority != 0 ) {
+				return priority;
 			}
 		}
 
 		// Unknown notices stay in the middle for review.
 		return NO_KEYWORD;
 	}
+
+	private static int priorityForKeyword( final String word,
+										   final FlightType type )
+	{
+		if( word.equals( "AD" ) || word.equals( "RWY" )
+				|| word.equals( "AIRSPACE" ) || word.equals( "SECURITY" ) ) {
+			return 1;
+		}
+
+		if( type == FlightType.VFR
+				&& ( word.equals( "VFP" ) || word.equals( "OBST" ) ) ) {
+			return 1;
+		}
+
+		if( type == FlightType.IFR
+				&& ( word.equals( "SPECIAL" ) || word.equals( "SID" )
+						|| word.equals( "IAP" ) ) ) {
+			return 1;
+		}
+
+		if( word.equals( "TWY" ) || word.equals( "APRON" )
+				|| word.equals( "SVC" ) ) {
+			return 3;
+		}
+
+		if( type == FlightType.IFR ) {
+			if( word.equals( "NAV" ) || word.equals( "COM" )
+					|| word.equals( "ODP" ) || word.equals( "STAR" )
+					|| word.equals( "OBST" ) || word.equals( "CHART" )
+					|| word.equals( "DATA" ) || word.equals( "DVA" )
+					|| word.equals( "VFP" ) || word.equals( "ROUTE" ) ) {
+				return 2;
+			}
+		}
+		else if( word.equals( "NAV" ) || word.equals( "COM" )
+				|| word.equals( "CHART" ) || word.equals( "DATA" )
+				|| word.equals( "DVA" ) || word.equals( "ROUTE" ) ) {
+			return 2;
+		}
+		else if( word.equals( "IAP" ) || word.equals( "ODP" )
+				|| word.equals( "SID" ) || word.equals( "STAR" )
+				|| word.equals( "SPECIAL" ) ) {
+			return 3;
+		}
+
+		return 0;
+	}
+
 }

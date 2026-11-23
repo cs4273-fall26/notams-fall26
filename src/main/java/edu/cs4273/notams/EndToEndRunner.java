@@ -3,7 +3,7 @@ package edu.cs4273.notams;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,9 +13,9 @@ import edu.cs4273.notams.api.NmsConfiguration;
 import edu.cs4273.notams.input.CliArgParser;
 import edu.cs4273.notams.objects.Notam;
 import edu.cs4273.notams.output.NotamOutput;
-import edu.cs4273.notams.processing.NotamReportWriter;
 import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
 import edu.cs4273.notams.processing.NotamFilter;
+import edu.cs4273.notams.processing.NotamReportWriter;
 import edu.cs4273.notams.processing.RouteNotamFetcher;
 
 public class EndToEndRunner
@@ -25,19 +25,24 @@ public class EndToEndRunner
 
 	public static void main( String[] args ) throws IOException
 	{
-		final Pair<String, String> input = CliArgParser.parse( args );
-		final String departureTime = CliArgParser.parseDepartureTime( args );
+		final Triple<String, String, String> input = CliArgParser.parse( args );
 		LOGGER.info( "Departure code: {}", input.getLeft() );
-		LOGGER.info( "Destination code: {}", input.getRight() );
+		LOGGER.info( "Destination code: {}", input.getMiddle() );
+		LOGGER.info( "Flight type: {}", input.getRight() );
+		final String departureTime = CliArgParser.parseDepartureTime( args );
+		LOGGER.info( "Departure time: {}", departureTime );
 
 		final NmsApiAccess apiClient = NmsConfiguration.fromEnvironment();
 		final LocationIdentifier departure = new LocationIdentifier(
 				input.getLeft() );
 		final LocationIdentifier destination = new LocationIdentifier(
-				input.getRight() );
+				input.getMiddle() );
 
 		final KeywordNotamPrioritizer prioritizer =
-				new KeywordNotamPrioritizer( departureTime );
+				new KeywordNotamPrioritizer(
+						KeywordNotamPrioritizer.FlightType.fromArgument(
+								input.getRight() ),
+						departureTime );
 		final List<Notam> prioritizedList = process(
 				departure, destination, apiClient, prioritizer );
 
@@ -49,7 +54,7 @@ public class EndToEndRunner
 		final NotamOutput fileOutput = new NotamOutput(
 				prioritizer::getPriority, false );
 		new NotamReportWriter( fileOutput ).save(
-				input.getLeft(), input.getRight(), prioritizedList );
+				input.getLeft(), input.getMiddle(), prioritizedList );
 	}
 
 	

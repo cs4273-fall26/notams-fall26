@@ -16,6 +16,38 @@ public class KeywordNotamPrioritizerTest
 			new KeywordNotamPrioritizer();
 
 	@Test
+	public void testFlightTypeChangesPriority()
+	{
+		final Notam visualProcedure =
+				new Notam( "1", "VFP RWY 18 PROCEDURE", "KOKC", "", "" );
+		final Notam obstruction =
+				new Notam( "2", "OBST NEAR AIRPORT", "KOKC", "", "" );
+		final Notam specialProcedure =
+				new Notam( "3", "SPECIAL PROCEDURE", "KOKC", "", "" );
+		final Notam sid =
+				new Notam( "4", "SID PROCEDURE", "KOKC", "", "" );
+		final Notam iap =
+				new Notam( "5", "IAP PROCEDURE", "KOKC", "", "" );
+		final KeywordNotamPrioritizer ifrPrioritizer =
+				new KeywordNotamPrioritizer(
+						KeywordNotamPrioritizer.FlightType.IFR );
+		final KeywordNotamPrioritizer vfrPrioritizer =
+				new KeywordNotamPrioritizer(
+						KeywordNotamPrioritizer.FlightType.VFR );
+
+		assertEquals( 2, ifrPrioritizer.getPriority( visualProcedure ) );
+		assertEquals( 1, vfrPrioritizer.getPriority( visualProcedure ) );
+		assertEquals( 2, ifrPrioritizer.getPriority( obstruction ) );
+		assertEquals( 1, vfrPrioritizer.getPriority( obstruction ) );
+		assertEquals( 1, ifrPrioritizer.getPriority( specialProcedure ) );
+		assertEquals( 3, vfrPrioritizer.getPriority( specialProcedure ) );
+		assertEquals( 1, ifrPrioritizer.getPriority( sid ) );
+		assertEquals( 3, vfrPrioritizer.getPriority( sid ) );
+		assertEquals( 1, ifrPrioritizer.getPriority( iap ) );
+		assertEquals( 3, vfrPrioritizer.getPriority( iap ) );
+	}
+
+	@Test
 	public void testSortByPriority()
 	{
 		final Notam taxiway =

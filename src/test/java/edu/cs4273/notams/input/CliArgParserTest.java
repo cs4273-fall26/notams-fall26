@@ -14,7 +14,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.junit.jupiter.api.Test;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -186,11 +186,25 @@ public class CliArgParserTest
 	@Test
 	public void testAirportCodesArePassedThroughWithoutStripping()
 	{
-		final Pair<String, String> parsed = CliArgParser.parse( new String[] {
+		final Triple<String, String, String> parsed = CliArgParser.parse( new String[] {
 				"--departure", "KOKC", "--destination", "KDEN"
 		} );
 
-		assertEquals( Pair.of( "KOKC", "KDEN" ), parsed );
+		assertEquals( Triple.of( "KOKC", "KDEN", null ), parsed );
+	}
+
+	@Test
+	public void testDepartureTimeAndFlightTypeOptions()
+	{
+		final String[] args = {
+			"--departure", "KOKC",
+			"--destination", "KDEN",
+			"--departure-time", "23:15",
+			"--flight-type", "vfr"
+		};
+
+		assertEquals( "23:15", CliArgParser.parseDepartureTime( args ) );
+		assertEquals( "vfr", CliArgParser.parse( args ).getRight() );
 	}
 
 	@Test
