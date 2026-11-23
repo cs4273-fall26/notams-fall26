@@ -53,4 +53,15 @@ public record LocationIdentifier(String locationValue)
 		return new IllegalArgumentException( message + " Possible matches: "
 				+ String.join( ", ", suggestions ) + "." );
 	}
+
+	public static List<String> suggestions( final String airportCode )
+	{
+		final String normalized = airportCode == null
+				? ""
+				: airportCode.trim().toUpperCase( Locale.US );
+
+		return ContinentalUsAirports.suggestions( normalized );
+	}
+
+
 }
