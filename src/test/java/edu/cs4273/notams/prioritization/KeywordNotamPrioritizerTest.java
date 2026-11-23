@@ -1,5 +1,6 @@
 package edu.cs4273.notams.prioritization;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -169,6 +170,43 @@ public class KeywordNotamPrioritizerTest
 		assertEquals( "4", result.get( 2 ).notamId() );
 		assertEquals( "1", result.get( 3 ).notamId() );
 		assertEquals( "5", result.get( 4 ).notamId() );
+	}
+
+	@Test
+	public void testNightNavigationIsMoreImportant()
+	{
+		final Notam taxiway =
+				new Notam( "1", "TWY A CLSD", "KOKC", "", "" );
+		final Notam navigation =
+				new Notam( "2", "NAV ILS U/S", "KOKC", "", "" );
+
+		final List<Notam> result = prioritizer.prioritize(
+				new ArrayList<>( List.of( taxiway, navigation ) ),
+				LocalTime.of( 22, 30 ) );
+
+		assertEquals( "2", result.get( 0 ).notamId() );
+		assertEquals( "1", result.get( 1 ).notamId() );
+	}
+
+	@Test
+	public void testNightTaxiwayPriorityDiffersFromDay()
+	{
+		final Notam taxiway =
+				new Notam( "1", "TWY A CLSD", "KOKC", "", "" );
+
+		assertEquals( 3, prioritizer.getPriority(
+				taxiway, LocalTime.of( 12, 0 ) ) );
+		assertEquals( 2, prioritizer.getPriority(
+				taxiway, LocalTime.of( 2, 0 ) ) );
+	}
+
+	@Test
+	public void testDepartureTimeStringOverload()
+	{
+		final Notam obstacle =
+				new Notam( "1", "OBST LIGHTS U/S", "KOKC", "", "" );
+
+		assertEquals( 1, prioritizer.getPriority( obstacle, "23:15" ) );
 	}
 
 

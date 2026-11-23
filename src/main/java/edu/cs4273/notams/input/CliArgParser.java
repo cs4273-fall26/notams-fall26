@@ -38,6 +38,26 @@ public class CliArgParser
 			System.exit( exitCode );
 		}
 	}
+	// Parses the departure time from the command line arguments
+	public static String parseDepartureTime( final String[] args )
+	{
+		if( args == null ) {
+			return null;
+		}
+		for( int i = 0; i < args.length; i++ ) {
+			if( "--departure-time".equals( args[i] )
+					|| "-t".equals( args[i] ) ) {
+				if( i + 1 < args.length ) {
+					return args[i + 1];
+				}
+				throw new RuntimeException(
+						new ParseException(
+								"Missing value for --departure-time" ) );
+			}
+		}
+		// If the departure time argument is not provided, return null
+		return null;
+	}
 
 	public static Pair<String, String> parse( String[] args )
 	{
@@ -65,6 +85,13 @@ public class CliArgParser
 				.desc( "Destination airport code" )
 				.get();
 		options.addOption( destinationOption );
+
+		final Option departureTimeOption = Option.builder( "t" )
+				.longOpt( "departure-time" )
+				.hasArg()
+				.desc( "Departure time in local HH:mm format" )
+				.get();
+		options.addOption( departureTimeOption );
 
 		final Option helpOption = Option.builder( "h" )
 				.longOpt( "help" )
