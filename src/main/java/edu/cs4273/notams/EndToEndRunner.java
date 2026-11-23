@@ -15,7 +15,6 @@ import edu.cs4273.notams.objects.Notam;
 import edu.cs4273.notams.output.NotamOutput;
 import edu.cs4273.notams.processing.NotamReportWriter;
 import edu.cs4273.notams.prioritization.KeywordNotamPrioritizer;
-import edu.cs4273.notams.prioritization.NotamPrioritizer;
 import edu.cs4273.notams.processing.NotamFilter;
 import edu.cs4273.notams.processing.RouteNotamFetcher;
 
@@ -27,6 +26,7 @@ public class EndToEndRunner
 	public static void main( String[] args ) throws IOException
 	{
 		final Pair<String, String> input = CliArgParser.parse( args );
+		final String departureTime = CliArgParser.parseDepartureTime( args );
 		LOGGER.info( "Departure code: {}", input.getLeft() );
 		LOGGER.info( "Destination code: {}", input.getRight() );
 
@@ -36,24 +36,37 @@ public class EndToEndRunner
 		final LocationIdentifier destination = new LocationIdentifier(
 				input.getRight() );
 
+		final KeywordNotamPrioritizer prioritizer =
+				new KeywordNotamPrioritizer( departureTime );
 		final List<Notam> prioritizedList = process(
-				departure, destination, apiClient );
+				departure, destination, apiClient, prioritizer );
 
 		final NotamOutput output = new NotamOutput(
-				new KeywordNotamPrioritizer()::getPriority );
+				prioritizer::getPriority );
 		output.render( prioritizedList );
 
 		// Save the report without console colors.
 		final NotamOutput fileOutput = new NotamOutput(
-				new KeywordNotamPrioritizer()::getPriority, false );
+				prioritizer::getPriority, false );
 		new NotamReportWriter( fileOutput ).save(
 				input.getLeft(), input.getRight(), prioritizedList );
+	}
+
+	
+	static List<Notam> process(
+			final LocationIdentifier departure,
+			final LocationIdentifier destination,
+			final NmsApiAccess apiClient )
+	{
+		return process( departure, destination, apiClient,
+				new KeywordNotamPrioritizer() );
 	}
 
 	static List<Notam> process(
 			final LocationIdentifier departure,
 			final LocationIdentifier destination,
-			final NmsApiAccess apiClient )
+			final NmsApiAccess apiClient,
+			final KeywordNotamPrioritizer prioritizer )
 	{
 		final List<Notam> notams = new RouteNotamFetcher( apiClient )
 				.fetch( departure, destination );
@@ -64,7 +77,6 @@ public class EndToEndRunner
 		LOGGER.debug( "Removed {} cancellation NOTAMs",
 				beforeCancellations - uniqueNotams.size() );
 
-		final NotamPrioritizer prioritizer = new KeywordNotamPrioritizer();
 		final List<Notam> prioritizedList = prioritizer.prioritize( uniqueNotams );
 		LOGGER.debug( "Prioritized {} NOTAMs", prioritizedList.size() );
 

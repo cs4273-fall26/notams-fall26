@@ -67,6 +67,13 @@ mvn compile exec:java \
 
 The end to end runner takes a departure and destination airport, fetches notams from the FAA API, and prints prioritized notams one per line. 
 
+In order to use prioritization based on the time of day, make sure to include the optional departure time. 
+
+```bash
+mvn exec:java -Dexec.mainClass="edu.cs4273.notams.EndToEndRunner" \
+    -Dexec.args="--departure departureAirport --destination destinationAirport --departure-time 22:30"
+```
+
 Set your FAA API credentials in the terminal session first(they are not persistent between sessions)
 
 To see debug logs (API calls, NOTAM counts, NOTAMs that failed to parse or are missing fields), set `LOG_LEVEL` before running:
